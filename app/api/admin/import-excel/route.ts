@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
     // ── Resolve existing users, create missing ones ──────────────────────────
     const existingUsers = await db.user.findMany({ select: { id: true, name: true } })
     const userMap = new Map<string, string>()
-    existingUsers.forEach(u => userMap.set(normName(u.name), u.id))
+    existingUsers.forEach((u: { id: string; name: string }) => userMap.set(normName(u.name), u.id))
 
     const hash     = await bcrypt.hash("user123", 10)
     const callerId = (session.user as any).id as string
