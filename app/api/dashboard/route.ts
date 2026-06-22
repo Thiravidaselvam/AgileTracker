@@ -139,7 +139,7 @@ export async function GET(request: Request) {
   })
   const reqStatusData = Object.entries(statusMap).map(([name, value]) => ({ name, value }))
 
-  const velocityData = sprints.map((s) => ({
+  const velocityData = sprints.map((s: { sprintName: string; plannedStories: number; completedStories: number; velocityPct: number }) => ({
     sprint:    s.sprintName,
     planned:   s.plannedStories,
     completed: s.completedStories,
@@ -175,7 +175,7 @@ export async function GET(request: Request) {
   const isDone = (status: string, doneList: string[]) =>
     doneList.includes(status) || doneList.includes(status.toLowerCase())
 
-  const userProgress = allUsers.map((u) => {
+  const userProgress = allUsers.map((u: { id: string; name: string; role: string }) => {
     const countBy = <T extends { ownerId: string | null; status: string }>(
       items: T[], doneList: string[]
     ) => {
