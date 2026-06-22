@@ -16,6 +16,13 @@ pipeline {
             }
         }
 
+        stage('Generate Prisma Client') {
+            steps {
+                bat 'npx prisma generate'
+                echo 'Prisma client generated'
+            }
+        }
+
         stage('Build') {
             steps {
                 bat 'npm run build'
