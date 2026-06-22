@@ -253,11 +253,11 @@ export async function generatePerformanceReport(period: string, date = new Date(
   const overdueMap   = new Map<string, number>()
 
   for (const items of [reqs, issues, testItems, support, actions, crs])
-    items.forEach((i) => inc(assignedMap, i.ownerId))
+    items.forEach((i: { ownerId: string | null }) => inc(assignedMap, i.ownerId))
   for (const items of [reqsDone, issuesDone, testsDone, supportDone, actionsDone, crsDone])
-    items.forEach((i) => inc(completedMap, i.ownerId))
+    items.forEach((i: { ownerId: string | null }) => inc(completedMap, i.ownerId))
   for (const items of [reqsOverdue, issuesOverdue, supportOverdue, actionsOverdue])
-    items.forEach((i) => inc(overdueMap, i.ownerId))
+    items.forEach((i: { ownerId: string | null }) => inc(overdueMap, i.ownerId))
 
   // On-time and resolution days per owner
   const onTimeMap = new Map<string, { onTime: number; withTarget: number }>()

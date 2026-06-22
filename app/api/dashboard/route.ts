@@ -127,13 +127,13 @@ export async function GET(request: Request) {
   // --- Charts ---
 
   const severityMap: Record<string, number> = {}
-  issues.forEach((i) => {
+  issues.forEach((i: { severity: string; status: string; openDate: Date; updatedAt: Date; owner: { name: string } | null }) => {
     severityMap[i.severity] = (severityMap[i.severity] ?? 0) + 1
   })
   const severityData = Object.entries(severityMap).map(([name, value]) => ({ name, value }))
 
   const statusMap: Record<string, number> = {}
-  requirements.forEach((r) => {
+  requirements.forEach((r: { status: string | null }) => {
     const s = r.status ?? "Open"
     statusMap[s] = (statusMap[s] ?? 0) + 1
   })
@@ -150,7 +150,7 @@ export async function GET(request: Request) {
   for (let d = 13; d >= 0; d--) {
     timelineMap[format(subDays(today, d), "MM/dd")] = { opened: 0, resolved: 0 }
   }
-  issues.forEach((i) => {
+  issues.forEach((i: { severity: string; status: string; openDate: Date; updatedAt: Date; owner: { name: string } | null }) => {
     const openKey = format(new Date(i.openDate), "MM/dd")
     if (timelineMap[openKey]) timelineMap[openKey].opened++
     if (ISSUE_DONE.includes(i.status.toLowerCase())) {
@@ -161,7 +161,7 @@ export async function GET(request: Request) {
   const timelineData = Object.entries(timelineMap).map(([date, v]) => ({ date, ...v }))
 
   const ownerMap: Record<string, number> = {}
-  issues.forEach((i) => {
+  issues.forEach((i: { severity: string; status: string; openDate: Date; updatedAt: Date; owner: { name: string } | null }) => {
     if (i.owner && !ISSUE_DONE.includes(i.status.toLowerCase())) {
       ownerMap[i.owner.name] = (ownerMap[i.owner.name] ?? 0) + 1
     }
