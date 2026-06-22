@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
   })
 
   // Update daysOpen in memory for display
-  const enriched = items.map((i) => ({
+  const enriched = items.map((i: { openDate: Date } & Record<string, unknown>) => ({
     ...i,
     daysOpen: differenceInDays(new Date(), new Date(i.openDate)),
   }))

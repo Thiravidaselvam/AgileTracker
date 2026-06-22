@@ -28,10 +28,10 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: "desc" },
   })
 
-  const enriched = docs.map((d) => {
+  const enriched = docs.map((d: { items: { status: string; section: string }[] } & Record<string, unknown>) => {
     const total    = d.items.length
-    const approved = d.items.filter((i) => i.status === "Approved").length
-    const sections = [...new Set(d.items.map((i) => i.section))].length
+    const approved = d.items.filter((i: { status: string; section: string }) => i.status === "Approved").length
+    const sections = [...new Set(d.items.map((i: { status: string; section: string }) => i.section))].length
     return { ...d, total, approved, sections, progress: total > 0 ? Math.round((approved / total) * 100) : 0 }
   })
 

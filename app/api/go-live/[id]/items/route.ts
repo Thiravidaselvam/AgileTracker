@@ -60,8 +60,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 async function syncChecklistStatus(checklistId: string) {
   const items = await db.goLiveItem.findMany({ where: { checklistId }, select: { status: true } })
   if (!items.length) return
-  const allDone = items.every((i) => i.status === "Done" || i.status === "Skipped")
-  const anyInProgress = items.some((i) => i.status === "In Progress")
+  const allDone = items.every((i: { status: string }) => i.status === "Done" || i.status === "Skipped")
+  const anyInProgress = items.some((i: { status: string }) => i.status === "In Progress")
   const newStatus = allDone ? "Completed" : anyInProgress ? "Active" : undefined
   if (newStatus) {
     await db.goLiveChecklist.update({ where: { id: checklistId }, data: { status: newStatus } })

@@ -50,7 +50,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   // If all items approved → auto-update document status to Completed
   const allItems = await db.signOffItem.findMany({ where: { documentId: id }, select: { status: true } })
-  const allApproved = allItems.length > 0 && allItems.every((i) => i.status === "Approved")
+  const allApproved = allItems.length > 0 && allItems.every((i: { status: string }) => i.status === "Approved")
   if (allApproved) await db.signOffDocument.update({ where: { id }, data: { status: "Completed" } })
   else await db.signOffDocument.update({ where: { id }, data: { status: "In Progress" } })
 

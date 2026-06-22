@@ -15,11 +15,11 @@ export async function GET() {
     },
   })
 
-  const data = checklists.map((c) => {
+  const data = checklists.map((c: { id: string; checklistId: string; title: string; project: string; goLiveDate: Date; description: string | null; status: string; createdAt: Date; items: { status: string; priority: string }[] }) => {
     const total    = c.items.length
-    const done     = c.items.filter((i) => i.status === "Done").length
-    const blocked  = c.items.filter((i) => i.status === "Blocked").length
-    const critical = c.items.filter((i) => i.priority === "Critical" && i.status !== "Done").length
+    const done     = c.items.filter((i: { status: string; priority: string }) => i.status === "Done").length
+    const blocked  = c.items.filter((i: { status: string; priority: string }) => i.status === "Blocked").length
+    const critical = c.items.filter((i: { status: string; priority: string }) => i.priority === "Critical" && i.status !== "Done").length
     return {
       id: c.id, checklistId: c.checklistId, title: c.title, project: c.project,
       goLiveDate: c.goLiveDate, description: c.description, status: c.status,
