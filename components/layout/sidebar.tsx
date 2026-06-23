@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 import {
   BarChart3, Bug, CheckSquare, Zap, HeadphonesIcon,
   ListTodo, FileBarChart, LayoutDashboard, ChevronLeft, ChevronRight,
-  ClipboardList, Users, GitPullRequestArrow, FileCheck2, Rocket,
+  ClipboardList, Users, GitPullRequestArrow, FileCheck2, Rocket, PlayCircle,
 } from "lucide-react"
 import { useState } from "react"
 
@@ -14,6 +14,7 @@ const nav = [
   { href: "/requirements",  label: "Requirements",      icon: ClipboardList   },
   { href: "/issues",        label: "Issue Tracker",     icon: Bug             },
   { href: "/test-items",    label: "Test Items",        icon: CheckSquare     },
+  { href: "/test-runner",   label: "Test Runner",       icon: PlayCircle      },
   { href: "/sprints",       label: "Sprint Tracker",    icon: Zap             },
   { href: "/support",       label: "Support",           icon: HeadphonesIcon  },
   { href: "/action-items",     label: "Action Items",     icon: ListTodo             },

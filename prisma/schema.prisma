@@ -271,6 +271,17 @@ model GoLiveItem {
   updatedAt   DateTime        @updatedAt
 }
 
+model TestRunnerImport {
+  id                    String   @id @default(cuid())
+  importedAt            DateTime @default(now())
+  fileName              String   @default("")
+  reset                 Int      @default(0)
+  totalTestItemsUpdated Int      @default(0)
+  sheets                Json     @default("[]")
+  rows                  Json     @default("[]")
+  summaryRows           Json     @default("[]")
+}
+
 model ReportShare {
   id         String    @id @default(cuid())
   reportType String
