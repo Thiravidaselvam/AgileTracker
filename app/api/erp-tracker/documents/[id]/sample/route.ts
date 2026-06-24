@@ -21,7 +21,7 @@ export async function GET(
     return NextResponse.json({ error: "No sample available for this document" }, { status: 404 })
   }
 
-  const content = Buffer.from(sample.content, "utf-8")
+  const content = new TextEncoder().encode(sample.content)
   return new NextResponse(content, {
     headers: {
       "Content-Disposition": `attachment; filename="${sample.filename}"`,

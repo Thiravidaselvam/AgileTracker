@@ -20,19 +20,19 @@ export async function GET(
   }
 
   const filePath = join(process.cwd(), "uploads", "erp-docs", doc.fileName)
-  let buffer: Buffer
+  let bytes: Uint8Array
   try {
-    buffer = await readFile(filePath)
+    bytes = new Uint8Array(await readFile(filePath))
   } catch {
     return NextResponse.json({ error: "File not found on disk" }, { status: 404 })
   }
 
   const originalName = doc.fileName.replace(/^[^_]+_/, "")
-  return new NextResponse(buffer, {
+  return new NextResponse(bytes, {
     headers: {
       "Content-Disposition": `attachment; filename="${originalName}"`,
       "Content-Type": "application/octet-stream",
-      "Content-Length": String(buffer.length),
+      "Content-Length": String(bytes.length),
     },
   })
 }

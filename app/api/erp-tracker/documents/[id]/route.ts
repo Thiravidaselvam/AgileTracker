@@ -90,7 +90,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const { ERP_SAMPLES } = await import("@/lib/erp-document-samples")
     const sample = ERP_SAMPLES[doc.docNumber]
     if (!sample) return NextResponse.json({ error: "No sample" }, { status: 404 })
-    const content = Buffer.from(sample.content, "utf-8")
+    const content = new TextEncoder().encode(sample.content)
     return new NextResponse(content, {
       headers: {
         "Content-Disposition": `attachment; filename="${sample.filename}"`,
@@ -102,12 +102,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   // Download uploaded file
   if (!doc.fileName) return NextResponse.json({ error: "No file uploaded" }, { status: 404 })
   const filePath = join(process.cwd(), "uploads", "erp-docs", doc.fileName)
-  let buffer: Buffer
-  try { buffer = await readFile(filePath) } catch {
+  let bytes: Uint8Array
+  try { bytes = new Uint8Array(await readFile(filePath)) } catch {
     return NextResponse.json({ error: "File not found on disk" }, { status: 404 })
   }
   const originalName = doc.fileName.replace(/^[^_]+_/, "")
-  return new NextResponse(buffer, {
+  return new NextResponse(bytes, {
     headers: {
       "Content-Disposition": `attachment; filename="${originalName}"`,
       "Content-Type": "application/octet-stream",
