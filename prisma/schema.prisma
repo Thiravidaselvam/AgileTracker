@@ -358,6 +358,7 @@ model ErpDocument {
   notes       String?
   fileName    String?
   fileSize    Int?
+  fileData    Bytes?
   uploadedAt  DateTime?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt

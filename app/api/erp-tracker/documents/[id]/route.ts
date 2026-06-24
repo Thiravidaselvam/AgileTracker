@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import { writeFile, mkdir, unlink, readFile } from "fs/promises"
-import { join } from "path"
 
 const DOC_STATUSES = ["Pending", "In Progress", "Done", "Skipped"]
 
@@ -27,7 +25,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   return NextResponse.json(doc)
 }
 
-// POST — upload a file for this document
+// POST — upload a file (stored in DB as bytes)
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -37,45 +35,42 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const file = formData.get("file") as File | null
   if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 })
 
-  const bytes = await file.arrayBuffer()
-  const buffer = Buffer.from(bytes)
-
-  const uploadDir = join(process.cwd(), "uploads", "erp-docs")
-  await mkdir(uploadDir, { recursive: true })
-
-  const safeName = `${id}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`
-  await writeFile(join(uploadDir, safeName), buffer)
+  const arrayBuffer = await file.arrayBuffer()
+  const bytes = Buffer.from(arrayBuffer)
 
   const doc = await db.erpDocument.update({
     where: { id },
-    data: { fileName: safeName, fileSize: file.size, uploadedAt: new Date() },
+    data: {
+      fileName:  file.name,
+      fileSize:  file.size,
+      fileData:  bytes,
+      uploadedAt: new Date(),
+    },
   })
 
-  return NextResponse.json({ fileName: doc.fileName, fileSize: doc.fileSize, uploadedAt: doc.uploadedAt })
+  return NextResponse.json({
+    fileName:  doc.fileName,
+    fileSize:  doc.fileSize,
+    uploadedAt: doc.uploadedAt,
+  })
 }
 
-// DELETE — remove the uploaded file for this document
+// DELETE — remove the uploaded file
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const { id } = await params
-  const doc = await db.erpDocument.findUnique({ where: { id } })
-  if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 })
-
-  if (doc.fileName) {
-    try { await unlink(join(process.cwd(), "uploads", "erp-docs", doc.fileName)) } catch { /* already gone */ }
-  }
 
   await db.erpDocument.update({
     where: { id },
-    data: { fileName: null, fileSize: null, uploadedAt: null },
+    data: { fileName: null, fileSize: null, fileData: null, uploadedAt: null },
   })
 
   return NextResponse.json({ ok: true })
 }
 
-// GET — download the uploaded file OR sample template (via ?type=sample)
+// GET — download uploaded file (?type=download) or sample template (?type=sample)
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -98,21 +93,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     })
   }
 
-  // Download uploaded file
-  if (!doc.fileName) return NextResponse.json({ error: "No file uploaded" }, { status: 404 })
-  const filePath = join(process.cwd(), "uploads", "erp-docs", doc.fileName)
-  let fileBuffer: Buffer
-  try { fileBuffer = await readFile(filePath) } catch {
-    return NextResponse.json({ error: "File not found on disk" }, { status: 404 })
+  // Download uploaded file from DB
+  if (!doc.fileData || !doc.fileName) {
+    return NextResponse.json({ error: "No file uploaded" }, { status: 404 })
   }
-  const ab = fileBuffer.buffer.slice(
-    fileBuffer.byteOffset,
-    fileBuffer.byteOffset + fileBuffer.byteLength
+
+  const ab = (doc.fileData as Buffer).buffer.slice(
+    (doc.fileData as Buffer).byteOffset,
+    (doc.fileData as Buffer).byteOffset + (doc.fileData as Buffer).byteLength
   ) as ArrayBuffer
-  const originalName = doc.fileName.replace(/^[^_]+_/, "")
+
   return new NextResponse(new Blob([ab]), {
     headers: {
-      "Content-Disposition": `attachment; filename="${originalName}"`,
+      "Content-Disposition": `attachment; filename="${doc.fileName}"`,
       "Content-Type": "application/octet-stream",
     },
   })

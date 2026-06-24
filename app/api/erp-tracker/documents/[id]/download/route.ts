@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { readFile } from "fs/promises"
-import { join } from "path"
 
 export async function GET(
   req: NextRequest,
@@ -15,29 +13,18 @@ export async function GET(
   const { id } = await params
 
   const doc = await db.erpDocument.findUnique({ where: { id } })
-  if (!doc || !doc.fileName) {
+  if (!doc || !doc.fileName || !doc.fileData) {
     return NextResponse.json({ error: "No uploaded file found" }, { status: 404 })
   }
 
-  const filePath = join(process.cwd(), "uploads", "erp-docs", doc.fileName)
-  let fileBuffer: Buffer
-  try {
-    fileBuffer = await readFile(filePath)
-  } catch {
-    return NextResponse.json({ error: "File not found on disk" }, { status: 404 })
-  }
+  const buf = doc.fileData as Buffer
+  const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer
 
-  const ab = fileBuffer.buffer.slice(
-    fileBuffer.byteOffset,
-    fileBuffer.byteOffset + fileBuffer.byteLength
-  ) as ArrayBuffer
-
-  const originalName = doc.fileName.replace(/^[^_]+_/, "")
   return new NextResponse(new Blob([ab]), {
     headers: {
-      "Content-Disposition": `attachment; filename="${originalName}"`,
+      "Content-Disposition": `attachment; filename="${doc.fileName}"`,
       "Content-Type": "application/octet-stream",
-      "Content-Length": String(fileBuffer.length),
+      "Content-Length": String(buf.length),
     },
   })
 }
