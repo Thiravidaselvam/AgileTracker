@@ -6,6 +6,7 @@ import {
   BarChart3, Bug, CheckSquare, Zap, HeadphonesIcon,
   ListTodo, FileBarChart, LayoutDashboard, ChevronLeft, ChevronRight,
   ClipboardList, Users, GitPullRequestArrow, FileCheck2, Rocket, PlayCircle,
+  Milestone,
 } from "lucide-react"
 import { useState } from "react"
 
@@ -21,6 +22,7 @@ const nav = [
   { href: "/change-requests",  label: "Change Requests",  icon: GitPullRequestArrow  },
   { href: "/sign-off",         label: "Sign-Off Docs",    icon: FileCheck2           },
   { href: "/go-live",          label: "Go-Live Checklist", icon: Rocket               },
+  { href: "/erp-tracker",      label: "ERP Impl. Tracker", icon: Milestone            },
   { href: "/users",            label: "User Management",  icon: Users                },
   { label: "Reports", icon: FileBarChart, sub: [
     { href: "/reports/progress",    label: "Reports"     },

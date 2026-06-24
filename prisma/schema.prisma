@@ -294,3 +294,85 @@ model ReportShare {
   expiresAt  DateTime?
   sentAt     DateTime  @default(now())
 }
+
+// ─── ERP Implementation Tracker ─────────────────────────────────────────────
+
+model ErpProject {
+  id           String        @id @default(cuid())
+  projectName  String        @default("[Project Name]")
+  clientName   String        @default("[Client Name]")
+  erpSoftware  String        @default("[ERP Software Name]")
+  partner      String        @default("[Your Company Name]")
+  startDate    DateTime?
+  goLiveDate   DateTime?
+  pm           String?
+  clientPoc    String?
+  notes        String?       @db.Text
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  phases       ErpPhase[]
+  documents    ErpDocument[]
+  risks        ErpRisk[]
+}
+
+model ErpPhase {
+  id          String     @id @default(cuid())
+  projectId   String
+  project     ErpProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  phaseNumber Int
+  phaseName   String
+  status      String     @default("Not Started")
+  startDate   DateTime?
+  endDate     DateTime?
+  order       Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  tasks       ErpTask[]
+}
+
+model ErpTask {
+  id        String    @id @default(cuid())
+  phaseId   String
+  phase     ErpPhase  @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  section   String
+  taskName  String
+  taskType  String    @default("activity")
+  status    String    @default("Pending")
+  owner     String?
+  dueDate   DateTime?
+  notes     String?   @db.Text
+  order     Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model ErpDocument {
+  id          String     @id @default(cuid())
+  projectId   String
+  project     ErpProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  docNumber   Int
+  category    String
+  title       String
+  preparedBy  String?
+  status      String     @default("Pending")
+  notes       String?
+  fileName    String?
+  fileSize    Int?
+  uploadedAt  DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model ErpRisk {
+  id          String     @id @default(cuid())
+  projectId   String
+  project     ErpProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  riskNumber  Int
+  description String     @db.Text
+  probability String     @default("Medium")
+  impact      String     @default("Medium")
+  mitigation  String?    @db.Text
+  status      String     @default("Open")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
