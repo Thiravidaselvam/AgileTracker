@@ -27,8 +27,13 @@ export async function GET(
     return NextResponse.json({ error: "File not found on disk" }, { status: 404 })
   }
 
+  const ab = fileBuffer.buffer.slice(
+    fileBuffer.byteOffset,
+    fileBuffer.byteOffset + fileBuffer.byteLength
+  ) as ArrayBuffer
+
   const originalName = doc.fileName.replace(/^[^_]+_/, "")
-  return new NextResponse(new Blob([fileBuffer]), {
+  return new NextResponse(new Blob([ab]), {
     headers: {
       "Content-Disposition": `attachment; filename="${originalName}"`,
       "Content-Type": "application/octet-stream",

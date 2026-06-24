@@ -21,7 +21,7 @@ export async function GET(
     return NextResponse.json({ error: "No sample available for this document" }, { status: 404 })
   }
 
-  return new NextResponse(new Blob([sample.content], { type: "text/plain; charset=utf-8" }), {
+  return new NextResponse(sample.content, {
     headers: {
       "Content-Disposition": `attachment; filename="${sample.filename}"`,
       "Content-Type": "text/plain; charset=utf-8",
