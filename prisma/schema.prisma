@@ -295,6 +295,19 @@ model ReportShare {
   sentAt     DateTime  @default(now())
 }
 
+model RolePermission {
+  id        String   @id @default(cuid())
+  role      Role
+  module    String
+  canView   Boolean  @default(true)
+  canCreate Boolean  @default(true)
+  canEdit   Boolean  @default(true)
+  canDelete Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+
+  @@unique([role, module])
+}
+
 // ─── ERP Implementation Tracker ─────────────────────────────────────────────
 
 model ErpProject {
