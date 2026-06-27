@@ -505,19 +505,40 @@ export default function ReportsPage() {
                       Tester-wise Progress <span className="text-xs font-normal text-gray-400">({testerGroups.length} testers)</span>
                     </h2>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                      {testersPager.visibleItems.map((tester: any) => (
-                        <Card key={tester.name}>
-                          <CardContent className="px-4 py-3 flex items-center gap-4">
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold text-gray-800">{tester.name}</p>
-                              <p className="text-xs text-gray-400">{tester.items.length} test item{tester.items.length !== 1 ? "s" : ""}</p>
-                            </div>
-                            <div className="flex-1">
+                      {testersPager.visibleItems.map((tester: any) => {
+                        const ownerCounts: Record<string, number> = {}
+                        tester.items.forEach((item: any) => {
+                          const owner = item.owner?.name ?? "Unassigned"
+                          ownerCounts[owner] = (ownerCounts[owner] || 0) + 1
+                        })
+                        const ownerEntries = Object.entries(ownerCounts).sort((a, b) => b[1] - a[1])
+
+                        return (
+                          <Card key={tester.name}>
+                            <CardHeader className="py-2 px-4 pb-1 border-b border-gray-100">
+                              <div className="flex items-center justify-between">
+                                <CardTitle className="text-sm font-semibold">{tester.name}</CardTitle>
+                                <span className="text-xs text-gray-400">{tester.items.length} test item{tester.items.length !== 1 ? "s" : ""}</span>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="px-4 py-3 space-y-2">
                               <StatusPills counts={countBy(tester.items)} />
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                              {ownerEntries.length > 0 && (
+                                <div>
+                                  <p className="text-xs text-gray-400 mb-1">By Owner</p>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {ownerEntries.map(([ownerName, count]) => (
+                                      <span key={ownerName} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700">
+                                        {ownerName} <span className="font-bold">{count}</span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        )
+                      })}
                     </div>
                     <div className="mt-2 rounded-xl border border-gray-200 overflow-hidden">
                       <Pager {...testersPager.pagerProps} />

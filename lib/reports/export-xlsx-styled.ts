@@ -162,7 +162,7 @@ export async function exportManagerSummaryXLSX(report: any, preparedBy = "Projec
   const dateLabel : string = period.split("–")[0].trim()         // "18 Jun 2026"
   const titleDate : string = dateLabel.toUpperCase()             // "18 JUN 2026"
 
-  const DONE_LC = ["completed","closed","resolved","fixed","done","passed","implemented"]
+  const DONE_LC = ["completed","closed","resolved","fixed","done","passed","pass","implemented"]
   const isDone  = (s: string) => DONE_LC.includes((s ?? "").toLowerCase())
 
   const issues   : any[] = report.issues         ?? []
@@ -206,6 +206,27 @@ export async function exportManagerSummaryXLSX(report: any, preparedBy = "Projec
 
     return [name, delivered, bugsFixed, reqsDone, testsDone, [...modSet].join(", ")]
   })
+
+  // ── Tester-wise summary (with per-owner breakdown) ───────────────────────
+  const testerMap = new Map<string, any[]>()
+  testItems.forEach((t: any) => {
+    const tester = t.testedBy || "Unassigned"
+    if (!testerMap.has(tester)) testerMap.set(tester, [])
+    testerMap.get(tester)!.push(t)
+  })
+  const testerGroupRows = [...testerMap.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([name, items]) => {
+      const statusCounts: Record<string, number> = {}
+      items.forEach((t: any) => { const s = t.status || "—"; statusCounts[s] = (statusCounts[s] || 0) + 1 })
+      const statusStr = Object.entries(statusCounts).map(([s, c]) => `${s}: ${c}`).join(", ")
+
+      const ownerCounts: Record<string, number> = {}
+      items.forEach((t: any) => { const o = t.owner?.name || "Unassigned"; ownerCounts[o] = (ownerCounts[o] || 0) + 1 })
+      const ownerStr = Object.entries(ownerCounts).sort((a, b) => b[1] - a[1]).map(([o, c]) => `${o}: ${c}`).join(", ")
+
+      return [name, items.length, statusStr, "", ownerStr, ""]
+    })
 
   // ── Risk notes ───────────────────────────────────────────────────────────
   const blockingTests  = testItems.filter(t => !isDone(t.status) && /(blocking|blocked)/i.test(t.description ?? ""))
@@ -319,6 +340,44 @@ export async function exportManagerSummaryXLSX(report: any, preparedBy = "Projec
     ws.mergeCells(riskRowNum, 1, riskRowNum, COLS)
     styleRow(ws, riskRowNum, COLS, riskStyle())
     ws.getRow(riskRowNum).height = 22
+
+    // Spacer
+    ws.addRow([])
+
+    // Tester Summary section header
+    const testerHeaderNum = ws.lastRow!.number + 1
+    ws.addRow(["TESTER-WISE TEST SUMMARY"])
+    ws.mergeCells(testerHeaderNum, 1, testerHeaderNum, COLS)
+    styleRow(ws, testerHeaderNum, COLS, sectionHeaderStyle(C.blueBg))
+    ws.getRow(testerHeaderNum).height = 18
+
+    // Tester column headers
+    const testerColHdrRow = ws.addRow(["Tester", "Total Items", "Status Breakdown", "", "Owner Breakdown", ""])
+    ws.mergeCells(testerColHdrRow.number, 3, testerColHdrRow.number, 4)
+    ws.mergeCells(testerColHdrRow.number, 5, testerColHdrRow.number, 6)
+    styleRow(ws, testerColHdrRow.number, COLS, colHeaderStyle())
+    testerColHdrRow.height = 22
+
+    // Tester data rows
+    if (testerGroupRows.length === 0) {
+      const emptyRow = ws.addRow(["No test items in this period", "", "", "", "", ""])
+      ws.mergeCells(emptyRow.number, 1, emptyRow.number, COLS)
+      styleRow(ws, emptyRow.number, COLS, dataStyle(false))
+      emptyRow.height = 18
+    } else {
+      testerGroupRows.forEach((row, i) => {
+        const r    = ws.addRow(row)
+        const even = i % 2 === 1
+        r.height   = 20
+        ws.mergeCells(r.number, 3, r.number, 4)
+        ws.mergeCells(r.number, 5, r.number, 6)
+        styleCell(ws, r.number, 1, boldDataStyle(even))
+        ws.getCell(r.number, 1).alignment = { vertical: "middle", horizontal: "left" }
+        styleCell(ws, r.number, 2, boldDataStyle(even))
+        styleCell(ws, r.number, 3, dataStyle(even))
+        styleCell(ws, r.number, 5, dataStyle(even))
+      })
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -405,17 +464,18 @@ export async function exportManagerSummaryXLSX(report: any, preparedBy = "Projec
   addDataSheet(
     "Test Items",
     `TEST ITEMS — ${dateLabel}  (${testItems.length} Active)`,
-    ["Test ID", "Module", "Sub Module", "Description", "Owner", "Priority", "Status"],
+    ["Test ID", "Module", "Sub Module", "Description", "Tested By", "Item Owner", "Priority", "Status"],
     testItems.map((t: any) => [
       t.testId,
       t.module,
-      t.subModule ?? "—",
+      t.subModule      ?? "—",
       t.description,
-      t.testedBy  ?? "—",
+      t.testedBy       ?? "—",
+      t.owner?.name    ?? "—",
       t.priority,
       t.status,
     ]),
-    [16, 22, 28, 60, 18, 10, 14],
+    [16, 22, 28, 55, 18, 18, 10, 14],
   )
 
   // ══════════════════════════════════════════════════════════════════════════
