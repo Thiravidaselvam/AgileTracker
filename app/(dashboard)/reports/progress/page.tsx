@@ -194,6 +194,18 @@ export default function ReportsPage() {
   const reqsPager    = usePager(report?.details?.updatedReqs    ?? [], 10)
   const overduePager = usePager(report?.details?.overdueIssues  ?? [], 10)
 
+  // daily tester groups (updatedTests grouped by testedBy)
+  const dailyTesterGroups: { name: string; items: any[] }[] = (() => {
+    if (type !== "daily" || !report?.details?.updatedTests?.length) return []
+    const map = new Map<string, any[]>()
+    report.details.updatedTests.forEach((t: any) => {
+      const k = t.testedBy || "Unassigned"
+      if (!map.has(k)) map.set(k, [])
+      map.get(k)!.push(t)
+    })
+    return [...map.entries()].map(([name, items]) => ({ name, items })).sort((a, b) => a.name.localeCompare(b.name))
+  })()
+
   const periodLabel = type === "daily" ? report?.date : report?.period
 
   return (
@@ -359,6 +371,49 @@ export default function ReportsPage() {
                   </Card>
                 )}
 
+                {dailyTesterGroups.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">
+                        Test Items Updated Today <span className="text-xs font-normal text-gray-400">({report.details.updatedTests.length})</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pb-3">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                        {dailyTesterGroups.map((tester) => {
+                          const ownerCounts: Record<string, number> = {}
+                          tester.items.forEach((item: any) => {
+                            const owner = item.owner?.name ?? "Unassigned"
+                            ownerCounts[owner] = (ownerCounts[owner] || 0) + 1
+                          })
+                          const ownerEntries = Object.entries(ownerCounts).sort((a, b) => b[1] - a[1])
+                          return (
+                            <div key={tester.name} className="p-3 rounded-lg bg-gray-50 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm font-semibold text-gray-800">{tester.name}</p>
+                                <span className="text-xs text-gray-400">{tester.items.length} item{tester.items.length !== 1 ? "s" : ""}</span>
+                              </div>
+                              <StatusPills counts={countBy(tester.items)} />
+                              {ownerEntries.length > 0 && (
+                                <div>
+                                  <p className="text-xs text-gray-400 mb-1">By Owner</p>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {ownerEntries.map(([ownerName, count]) => (
+                                      <span key={ownerName} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700">
+                                        {ownerName} <span className="font-bold">{count}</span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {report.details.overdueIssues.length > 0 && (
                   <Card className="border-red-200">
                     <CardHeader className="pb-2">
@@ -378,7 +433,7 @@ export default function ReportsPage() {
                   </Card>
                 )}
 
-                {report.details.updatedIssues.length === 0 && report.details.updatedReqs.length === 0 && report.details.overdueIssues.length === 0 && (
+                {report.details.updatedIssues.length === 0 && report.details.updatedReqs.length === 0 && report.details.updatedTests.length === 0 && report.details.overdueIssues.length === 0 && (
                   <div className="text-center py-12 text-gray-400 text-sm">No activity recorded today.</div>
                 )}
               </>
