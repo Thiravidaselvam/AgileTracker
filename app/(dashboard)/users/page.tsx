@@ -7,34 +7,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { useToast } from "@/components/ui/use-toast"
 import { formatDate } from "@/lib/utils"
 import { Plus, ShieldCheck, ShieldAlert, Shield, RefreshCw, Pencil, Trash2 } from "lucide-react"
 import { AdminTools } from "@/components/layout/admin-tools"
-
-// ── color palette for custom roles ────────────────────────────────────────────
-
-const COLOR_OPTIONS = ["slate","blue","green","amber","red","purple","pink","orange","teal","cyan","indigo","rose"] as const
-type ColorKey = typeof COLOR_OPTIONS[number]
-
-const COLOR_MAP: Record<ColorKey, { bg: string; text: string; border: string; dot: string }> = {
-  slate:  { bg: "bg-slate-100",  text: "text-slate-800",  border: "border-slate-200",  dot: "bg-slate-400"  },
-  blue:   { bg: "bg-blue-100",   text: "text-blue-800",   border: "border-blue-200",   dot: "bg-blue-500"   },
-  green:  { bg: "bg-green-100",  text: "text-green-800",  border: "border-green-200",  dot: "bg-green-500"  },
-  amber:  { bg: "bg-amber-100",  text: "text-amber-800",  border: "border-amber-200",  dot: "bg-amber-400"  },
-  red:    { bg: "bg-red-100",    text: "text-red-800",    border: "border-red-200",    dot: "bg-red-500"    },
-  purple: { bg: "bg-purple-100", text: "text-purple-800", border: "border-purple-200", dot: "bg-purple-500" },
-  pink:   { bg: "bg-pink-100",   text: "text-pink-800",   border: "border-pink-200",   dot: "bg-pink-500"   },
-  orange: { bg: "bg-orange-100", text: "text-orange-800", border: "border-orange-200", dot: "bg-orange-500" },
-  teal:   { bg: "bg-teal-100",   text: "text-teal-800",   border: "border-teal-200",   dot: "bg-teal-500"   },
-  cyan:   { bg: "bg-cyan-100",   text: "text-cyan-800",   border: "border-cyan-200",   dot: "bg-cyan-500"   },
-  indigo: { bg: "bg-indigo-100", text: "text-indigo-800", border: "border-indigo-200", dot: "bg-indigo-500" },
-  rose:   { bg: "bg-rose-100",   text: "text-rose-800",   border: "border-rose-200",   dot: "bg-rose-500"   },
-}
-
-function colorCls(c: string) { return COLOR_MAP[c as ColorKey] ?? COLOR_MAP.slate }
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
@@ -80,7 +57,26 @@ const ROLE_BADGE: Record<string, string> = {
   MEMBER:  "bg-gray-100  text-gray-700  border-gray-200",
 }
 
-const emptyForm = { name: "", email: "", password: "", role: "MEMBER" }
+// Static COLOR_MAP so Tailwind v4 never purges these classes
+const COLOR_MAP: Record<string, { bg: string; text: string; border: string; dot: string }> = {
+  slate:  { bg: "bg-slate-100",  text: "text-slate-800",  border: "border-slate-200",  dot: "bg-slate-400"  },
+  blue:   { bg: "bg-blue-100",   text: "text-blue-800",   border: "border-blue-200",   dot: "bg-blue-400"   },
+  green:  { bg: "bg-green-100",  text: "text-green-800",  border: "border-green-200",  dot: "bg-green-400"  },
+  amber:  { bg: "bg-amber-100",  text: "text-amber-800",  border: "border-amber-200",  dot: "bg-amber-400"  },
+  red:    { bg: "bg-red-100",    text: "text-red-800",    border: "border-red-200",    dot: "bg-red-400"    },
+  purple: { bg: "bg-purple-100", text: "text-purple-800", border: "border-purple-200", dot: "bg-purple-400" },
+  pink:   { bg: "bg-pink-100",   text: "text-pink-800",   border: "border-pink-200",   dot: "bg-pink-400"   },
+  orange: { bg: "bg-orange-100", text: "text-orange-800", border: "border-orange-200", dot: "bg-orange-400" },
+  teal:   { bg: "bg-teal-100",   text: "text-teal-800",   border: "border-teal-200",   dot: "bg-teal-400"   },
+  cyan:   { bg: "bg-cyan-100",   text: "text-cyan-800",   border: "border-cyan-200",   dot: "bg-cyan-400"   },
+  indigo: { bg: "bg-indigo-100", text: "text-indigo-800", border: "border-indigo-200", dot: "bg-indigo-400" },
+  rose:   { bg: "bg-rose-100",   text: "text-rose-800",   border: "border-rose-200",   dot: "bg-rose-400"   },
+}
+const COLOR_KEYS = Object.keys(COLOR_MAP)
+function colorCls(color: string) { return COLOR_MAP[color] ?? COLOR_MAP.slate }
+
+const emptyForm = { name: "", email: "", password: "", role: "MEMBER", customRoleId: "" }
+const emptyCustomRoleForm = { name: "", description: "", color: "slate" }
 
 type PermMatrix = Record<string, Record<string, Record<PermKey, boolean>>>
 
@@ -95,7 +91,6 @@ export default function UsersPage() {
   const isManager  = callerRole === "MANAGER"
   const canAddUsers = isAdmin || isManager
 
-  // ── users state ──
   const [data,        setData]        = useState<any[]>([])
   const [loading,     setLoading]     = useState(true)
   const [roleFilter,  setRoleFilter]  = useState("all")
@@ -103,30 +98,21 @@ export default function UsersPage() {
   const [editing,     setEditing]     = useState<any | null>(null)
   const [form,        setForm]        = useState(emptyForm)
   const [saving,      setSaving]      = useState(false)
-  const [roleChanging, setRoleChanging] = useState<string | null>(null)
+  const [roleChanging,       setRoleChanging]       = useState<string | null>(null)
+  const [customRoleChanging, setCustomRoleChanging] = useState<string | null>(null)
 
-  // ── permissions state ──
   const [perms,        setPerms]        = useState<PermMatrix>({})
   const [permsLoading, setPermsLoading] = useState(false)
   const [toggling,     setToggling]     = useState<string | null>(null)
 
-  // ── custom roles state ──
-  const [customRoles,         setCustomRoles]         = useState<any[]>([])
-  const [customRolesLoading,  setCustomRolesLoading]  = useState(false)
-  const [crDialogOpen,        setCrDialogOpen]        = useState(false)
-  const [crEditing,           setCrEditing]           = useState<any | null>(null)
-  const [crForm,              setCrForm]              = useState({ name: "", description: "", color: "blue" })
-  const [crSaving,            setCrSaving]            = useState(false)
-  const [crToggles,           setCrToggles]           = useState<Record<string, boolean>>({})
-  const [customRoleAssigning, setCustomRoleAssigning] = useState<string | null>(null)
-
-  // ── load functions (must be declared before useEffect) ──
-  const loadCustomRoles = useCallback(async () => {
-    setCustomRolesLoading(true)
-    const r = await fetch("/api/custom-roles")
-    setCustomRoles(r.ok ? await r.json() : [])
-    setCustomRolesLoading(false)
-  }, [])
+  const [customRoles,        setCustomRoles]        = useState<any[]>([])
+  const [customRolesLoading, setCustomRolesLoading] = useState(false)
+  const [selectedCustomRole, setSelectedCustomRole] = useState<any | null>(null)
+  const [crTogglingKey,      setCrTogglingKey]      = useState<string | null>(null)
+  const [crOpen,             setCrOpen]             = useState(false)
+  const [crEditing,          setCrEditing]          = useState<any | null>(null)
+  const [crForm,             setCrForm]             = useState(emptyCustomRoleForm)
+  const [crSaving,           setCrSaving]           = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -137,6 +123,8 @@ export default function UsersPage() {
     setLoading(false)
   }, [roleFilter])
 
+  useEffect(() => { load() }, [load])
+
   const loadPerms = useCallback(async () => {
     setPermsLoading(true)
     const r = await fetch("/api/role-permissions")
@@ -144,67 +132,15 @@ export default function UsersPage() {
     setPermsLoading(false)
   }, [])
 
-  useEffect(() => { load(); loadCustomRoles() }, [load, loadCustomRoles])
+  const loadCustomRoles = useCallback(async () => {
+    setCustomRolesLoading(true)
+    const r = await fetch("/api/custom-roles")
+    const list = await r.json()
+    setCustomRoles(list)
+    if (list.length > 0 && !selectedCustomRole) setSelectedCustomRole(list[0])
+    setCustomRolesLoading(false)
+  }, [selectedCustomRole])
 
-  async function saveCustomRole() {
-    if (!crForm.name.trim()) {
-      toast({ title: "Role name is required", variant: "destructive" }); return
-    }
-    setCrSaving(true)
-    const method = crEditing ? "PUT" : "POST"
-    const url    = crEditing ? `/api/custom-roles/${crEditing.id}` : "/api/custom-roles"
-    const res = await fetch(url, {
-      method, headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(crForm),
-    })
-    setCrSaving(false)
-    if (res.ok) {
-      toast({ title: crEditing ? "Role updated" : "Role created", variant: "success" })
-      setCrDialogOpen(false)
-      loadCustomRoles()
-    } else {
-      const err = await res.json()
-      toast({ title: err.error ?? "Error saving role", variant: "destructive" })
-    }
-  }
-
-  async function deleteCustomRole(cr: any) {
-    if (!confirm(`Delete role "${cr.name}"? This cannot be undone.`)) return
-    const res = await fetch(`/api/custom-roles/${cr.id}`, { method: "DELETE" })
-    if (res.ok) { toast({ title: "Role deleted", variant: "destructive" }); loadCustomRoles() }
-    else { const err = await res.json(); toast({ title: err.error ?? "Error deleting role", variant: "destructive" }) }
-  }
-
-  async function toggleCustomPerm(roleId: string, module: string, perm: PermKey, current: boolean) {
-    const key = `${roleId}_${module}_${perm}`
-    setCrToggles(prev => ({ ...prev, [key]: true }))
-    const res = await fetch(`/api/custom-roles/${roleId}/permissions`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ module, permission: perm, value: !current }),
-    })
-    if (res.ok) {
-      setCustomRoles(prev => prev.map(r => r.id !== roleId ? r : {
-        ...r,
-        permissions: r.permissions.map((p: any) =>
-          p.module === module ? { ...p, [perm]: !current } : p
-        ),
-      }))
-    } else toast({ title: "Failed to update permission", variant: "destructive" })
-    setCrToggles(prev => { const n = { ...prev }; delete n[key]; return n })
-  }
-
-  async function assignCustomRole(user: any, customRoleId: string | null) {
-    setCustomRoleAssigning(user.id)
-    const res = await fetch(`/api/users/${user.id}`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: user.name, email: user.email, role: user.role, customRoleId }),
-    })
-    setCustomRoleAssigning(null)
-    if (res.ok) { toast({ title: customRoleId ? "Custom role assigned" : "Custom role removed", variant: "success" }); load() }
-    else { const err = await res.json(); toast({ title: err.error ?? "Error", variant: "destructive" }) }
-  }
-
-  // ── helpers ──
   function canEdit(row: any) {
     if (isAdmin) return true
     if (isManager && row.role === "MEMBER") return true
@@ -215,172 +151,182 @@ export default function UsersPage() {
   function openNew() { setEditing(null); setForm(emptyForm); setOpen(true) }
 
   function openEdit(row: any) {
-    if (!canEdit(row)) {
-      toast({ title: "You can only edit your own profile", variant: "destructive" })
-      return
-    }
+    if (!canEdit(row)) { toast({ title: "You can only edit your own profile", variant: "destructive" }); return }
     setEditing(row)
-    setForm({ name: row.name, email: row.email, password: "", role: row.role })
+    setForm({ name: row.name, email: row.email, password: "", role: row.role, customRoleId: row.customRoleId ?? "" })
     setOpen(true)
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this user? This cannot be undone.")) return
     const res = await fetch(`/api/users/${id}`, { method: "DELETE" })
-    if (res.ok) {
-      toast({ title: "User deleted", variant: "destructive" })
-      load()
-    } else {
-      const err = await res.json()
-      toast({ title: err.error ?? "Error deleting user", variant: "destructive" })
-    }
+    if (res.ok) { toast({ title: "User deleted", variant: "destructive" }); load() }
+    else { const e = await res.json(); toast({ title: e.error ?? "Error deleting user", variant: "destructive" }) }
   }
 
   async function handleSave() {
     if (!form.name.trim() || !form.email.trim()) {
-      toast({ title: "Name and email are required", variant: "destructive" })
-      return
+      toast({ title: "Name and email are required", variant: "destructive" }); return
     }
     if (!editing && !form.password) {
-      toast({ title: "Password is required for new users", variant: "destructive" })
-      return
+      toast({ title: "Password is required for new users", variant: "destructive" }); return
     }
     setSaving(true)
     const method = editing ? "PUT" : "POST"
     const url    = editing ? `/api/users/${editing.id}` : "/api/users"
-    const body: any = { name: form.name, email: form.email, role: form.role }
+    const body: any = { name: form.name, email: form.email, role: form.role, customRoleId: form.customRoleId || null }
     if (form.password) body.password = form.password
     const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
     setSaving(false)
-    if (res.ok) {
-      toast({ title: editing ? "User updated" : "User created", variant: "success" })
-      setOpen(false)
-      load()
-    } else {
-      const err = await res.json()
-      toast({ title: err.error ?? "Error saving user", variant: "destructive" })
-    }
+    if (res.ok) { toast({ title: editing ? "User updated" : "User created", variant: "success" }); setOpen(false); load() }
+    else { const e = await res.json(); toast({ title: e.error ?? "Error saving user", variant: "destructive" }) }
   }
 
   async function quickRoleChange(user: any, newRole: string) {
     if (newRole === user.role) return
     setRoleChanging(user.id)
     const res = await fetch(`/api/users/${user.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: user.name, email: user.email, role: newRole }),
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: user.name, email: user.email, role: newRole, customRoleId: user.customRoleId }),
     })
     setRoleChanging(null)
-    if (res.ok) {
-      toast({ title: `${user.name} → ${newRole}`, variant: "success" })
-      load()
-    } else {
-      const err = await res.json()
-      toast({ title: err.error ?? "Failed to change role", variant: "destructive" })
-    }
+    if (res.ok) { toast({ title: `${user.name} → ${newRole}`, variant: "success" }); load() }
+    else { const e = await res.json(); toast({ title: e.error ?? "Failed to change role", variant: "destructive" }) }
+  }
+
+  async function quickCustomRoleChange(user: any, newCustomRoleId: string) {
+    setCustomRoleChanging(user.id)
+    const res = await fetch(`/api/users/${user.id}`, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: user.name, email: user.email, role: user.role, customRoleId: newCustomRoleId || null }),
+    })
+    setCustomRoleChanging(null)
+    if (res.ok) { toast({ title: "Custom role updated", variant: "success" }); load() }
+    else { const e = await res.json(); toast({ title: e.error ?? "Failed to update custom role", variant: "destructive" }) }
   }
 
   async function togglePerm(role: string, module: string, perm: PermKey, current: boolean) {
     const key = `${role}_${module}_${perm}`
     setToggling(key)
     const res = await fetch("/api/role-permissions", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      method: "PUT", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ role, module, permission: perm, value: !current }),
     })
     if (res.ok) {
-      setPerms(prev => ({
-        ...prev,
-        [role]: { ...prev[role], [module]: { ...prev[role]?.[module], [perm]: !current } },
-      }))
-    } else {
-      toast({ title: "Failed to update permission", variant: "destructive" })
-    }
+      setPerms(prev => ({ ...prev, [role]: { ...prev[role], [module]: { ...prev[role]?.[module], [perm]: !current } } }))
+    } else { toast({ title: "Failed to update permission", variant: "destructive" }) }
     setToggling(null)
   }
 
+  async function toggleCrPerm(roleId: string, module: string, perm: PermKey, current: boolean) {
+    const key = `${roleId}_${module}_${perm}`
+    setCrTogglingKey(key)
+    const res = await fetch(`/api/custom-roles/${roleId}/permissions`, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ module, permission: perm, value: !current }),
+    })
+    if (res.ok) {
+      const updater = (cr: any) => ({
+        ...cr,
+        permissions: cr.permissions.map((p: any) => p.module === module ? { ...p, [perm]: !current } : p),
+      })
+      setCustomRoles(prev => prev.map(cr => cr.id === roleId ? updater(cr) : cr))
+      setSelectedCustomRole((prev: any) => prev?.id === roleId ? updater(prev) : prev)
+    } else { toast({ title: "Failed to update permission", variant: "destructive" }) }
+    setCrTogglingKey(null)
+  }
+
+  function openNewCustomRole() { setCrEditing(null); setCrForm(emptyCustomRoleForm); setCrOpen(true) }
+
+  function openEditCustomRole(cr: any) {
+    setCrEditing(cr)
+    setCrForm({ name: cr.name, description: cr.description ?? "", color: cr.color })
+    setCrOpen(true)
+  }
+
+  async function handleSaveCustomRole() {
+    if (!crForm.name.trim()) { toast({ title: "Role name is required", variant: "destructive" }); return }
+    setCrSaving(true)
+    const method = crEditing ? "PUT" : "POST"
+    const url    = crEditing ? `/api/custom-roles/${crEditing.id}` : "/api/custom-roles"
+    const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(crForm) })
+    setCrSaving(false)
+    if (res.ok) {
+      const updated = await res.json()
+      toast({ title: crEditing ? "Role updated" : "Role created", variant: "success" })
+      setCrOpen(false)
+      await loadCustomRoles()
+      if (!crEditing) setSelectedCustomRole(updated)
+    } else { const e = await res.json(); toast({ title: e.error ?? "Error saving role", variant: "destructive" }) }
+  }
+
+  async function handleDeleteCustomRole(cr: any) {
+    if (!confirm(`Delete role "${cr.name}"? This cannot be undone.`)) return
+    const res = await fetch(`/api/custom-roles/${cr.id}`, { method: "DELETE" })
+    if (res.ok) {
+      toast({ title: `Role "${cr.name}" deleted`, variant: "destructive" })
+      const next = customRoles.filter(r => r.id !== cr.id)
+      setCustomRoles(next)
+      setSelectedCustomRole(next[0] ?? null)
+    } else { const e = await res.json(); toast({ title: e.error ?? "Error deleting role", variant: "destructive" }) }
+  }
+
   const editableRoles = isAdmin ? [...ROLES] : ["MEMBER"]
-
-  // ── filtered users ──
-  const filteredData = roleFilter === "all" ? data : data.filter(u => u.role === roleFilter)
-
-  // ── render ───────────────────────────────────────────────────────────────
+  const filteredData  = roleFilter === "all" ? data : data.filter(u => u.role === roleFilter)
 
   return (
     <div className="flex flex-col h-full">
       <Header title="User Management" />
       <div className="flex-1 p-6 space-y-4 overflow-y-auto">
 
-        {/* Role legend */}
+        {/* legend */}
         <div className="flex flex-wrap gap-3 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
-          <span className="flex items-center gap-1">
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-medium ${ROLE_BADGE.ADMIN}`}>
-              {ROLE_ICON.ADMIN} ADMIN
-            </span>
-            Full access — manage users, roles &amp; permissions
-          </span>
-          <span className="text-gray-300">·</span>
-          <span className="flex items-center gap-1">
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-medium ${ROLE_BADGE.MANAGER}`}>
-              {ROLE_ICON.MANAGER} MANAGER
-            </span>
-            Manage members, view all modules
-          </span>
-          <span className="text-gray-300">·</span>
-          <span className="flex items-center gap-1">
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-medium ${ROLE_BADGE.MEMBER}`}>
-              {ROLE_ICON.MEMBER} MEMBER
-            </span>
-            Standard access per permission settings
-          </span>
+          {(["ADMIN","MANAGER","MEMBER"] as const).map((r, i) => (
+            <>
+              {i > 0 && <span key={`dot-${r}`} className="text-gray-300">·</span>}
+              <span key={r} className="flex items-center gap-1">
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-medium ${ROLE_BADGE[r]}`}>
+                  {ROLE_ICON[r]} {r}
+                </span>
+                {r === "ADMIN" ? "Full access — manage users, roles & permissions" : r === "MANAGER" ? "Manage members, view all modules" : "Standard access per permission settings"}
+              </span>
+            </>
+          ))}
         </div>
 
         <Tabs defaultValue="users" onValueChange={(v) => {
-          if (v === "permissions") {
-            if (Object.keys(perms).length === 0) loadPerms()
-            if (customRoles.length === 0) loadCustomRoles()
-          }
+          if (v === "permissions"  && Object.keys(perms).length === 0) loadPerms()
+          if (v === "custom-roles" && customRoles.length === 0)        loadCustomRoles()
         }}>
           <TabsList>
             <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="permissions">Roles &amp; Permissions</TabsTrigger>
+            <TabsTrigger value="permissions">System Roles</TabsTrigger>
+            <TabsTrigger value="custom-roles">Custom Roles</TabsTrigger>
           </TabsList>
 
-          {/* ══ USERS TAB ══════════════════════════════════════════════════ */}
+          {/* USERS */}
           <TabsContent value="users" className="space-y-4">
-
             {isAdmin && <AdminTools onDataChange={load} />}
 
             <div className="flex flex-wrap items-center gap-3">
               <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Filter by role" />
-                </SelectTrigger>
+                <SelectTrigger className="w-40"><SelectValue placeholder="Filter by role" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Roles</SelectItem>
                   {ROLES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                 </SelectContent>
               </Select>
               <div className="flex-1" />
-              <Button variant="outline" size="sm" onClick={load} disabled={loading}>
-                <RefreshCw className="h-3.5 w-3.5 mr-1" /> Refresh
-              </Button>
-              {canAddUsers && (
-                <Button onClick={openNew}>
-                  <Plus className="h-4 w-4 mr-1" /> Add User
-                </Button>
-              )}
+              <Button variant="outline" size="sm" onClick={load} disabled={loading}><RefreshCw className="h-3.5 w-3.5 mr-1" /> Refresh</Button>
+              {canAddUsers && <Button onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Add User</Button>}
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+              <div className="px-4 py-3 border-b border-gray-100">
                 <p className="text-sm font-medium text-gray-700">{filteredData.length} user{filteredData.length !== 1 ? "s" : ""}</p>
               </div>
-
               {loading ? (
-                <div className="space-y-2 p-4">
-                  {[1,2,3].map(i => <div key={i} className="h-12 bg-gray-100 rounded animate-pulse" />)}
-                </div>
+                <div className="space-y-2 p-4">{[1,2,3].map(i => <div key={i} className="h-12 bg-gray-100 rounded animate-pulse" />)}</div>
               ) : filteredData.length === 0 ? (
                 <div className="py-16 text-center text-gray-400 text-sm">No users found.</div>
               ) : (
@@ -388,10 +334,8 @@ export default function UsersPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-200 bg-gray-50">
-                        {["Name", "Email", "System Role", "Custom Role", "Created", "Actions"].map(h => (
-                          <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">
-                            {h}
-                          </th>
+                        {["Name","Email","System Role","Custom Role","Created","Actions"].map(h => (
+                          <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -401,7 +345,6 @@ export default function UsersPage() {
                           <td className="px-4 py-3 font-medium text-gray-900">{user.name}</td>
                           <td className="px-4 py-3 text-gray-500">{user.email}</td>
                           <td className="px-4 py-3">
-                            {/* Admin can change role inline for any user that isn't themselves */}
                             {isAdmin && user.id !== callerId ? (
                               <div className="flex items-center gap-2">
                                 <select
@@ -412,9 +355,7 @@ export default function UsersPage() {
                                 >
                                   {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                                 </select>
-                                {roleChanging === user.id && (
-                                  <span className="text-xs text-gray-400 animate-pulse">Saving…</span>
-                                )}
+                                {roleChanging === user.id && <span className="text-xs text-gray-400 animate-pulse">Saving…</span>}
                               </div>
                             ) : (
                               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-medium ${ROLE_BADGE[user.role] ?? ROLE_BADGE.MEMBER}`}>
@@ -424,23 +365,26 @@ export default function UsersPage() {
                           </td>
                           <td className="px-4 py-3">
                             {isAdmin ? (
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-2">
                                 <select
                                   value={user.customRoleId ?? ""}
-                                  disabled={customRoleAssigning === user.id}
-                                  onChange={(e) => assignCustomRole(user, e.target.value || null)}
-                                  className="text-xs border border-gray-200 rounded-md px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 min-w-[100px]"
+                                  disabled={customRoleChanging === user.id}
+                                  onChange={(e) => quickCustomRoleChange(user, e.target.value)}
+                                  className="text-xs border border-gray-200 rounded-md px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-purple-400 disabled:opacity-50 max-w-[140px]"
                                 >
-                                  <option value="">— None —</option>
-                                  {customRoles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                                  <option value="">— none —</option>
+                                  {customRoles.map(cr => <option key={cr.id} value={cr.id}>{cr.name}</option>)}
                                 </select>
-                                {customRoleAssigning === user.id && <span className="text-xs text-gray-400 animate-pulse">Saving…</span>}
+                                {customRoleChanging === user.id && <span className="text-xs text-gray-400 animate-pulse">Saving…</span>}
                               </div>
                             ) : user.customRole ? (
-                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-medium ${colorCls(user.customRole.color).bg} ${colorCls(user.customRole.color).text} ${colorCls(user.customRole.color).border}`}>
+                              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-xs font-medium ${colorCls(user.customRole.color).bg} ${colorCls(user.customRole.color).text} ${colorCls(user.customRole.color).border}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${colorCls(user.customRole.color).dot}`} />
                                 {user.customRole.name}
                               </span>
-                            ) : <span className="text-gray-300 text-xs">—</span>}
+                            ) : (
+                              <span className="text-xs text-gray-400">—</span>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-gray-500 text-xs">{formatDate(user.createdAt)}</td>
                           <td className="px-4 py-3">
@@ -466,15 +410,11 @@ export default function UsersPage() {
             </div>
           </TabsContent>
 
-          {/* ══ PERMISSIONS TAB ════════════════════════════════════════════ */}
+          {/* SYSTEM ROLES */}
           <TabsContent value="permissions" className="space-y-4">
-
-            {/* Header info */}
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="text-sm text-gray-600 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 flex-1">
-                {isAdmin
-                  ? "Click any permission button to toggle access for that role. ADMIN always has full access."
-                  : "Only Admins can modify role permissions. Contact your admin to request changes."}
+                {isAdmin ? "Click any permission button to toggle access for that role. ADMIN always has full access." : "Only Admins can modify role permissions."}
               </div>
               <Button variant="outline" size="sm" onClick={loadPerms} disabled={permsLoading}>
                 <RefreshCw className="h-3.5 w-3.5 mr-1" /> {permsLoading ? "Loading…" : "Refresh"}
@@ -482,9 +422,7 @@ export default function UsersPage() {
             </div>
 
             {permsLoading ? (
-              <div className="space-y-2">
-                {[1,2,3,4,5].map(i => <div key={i} className="h-12 bg-gray-100 rounded animate-pulse" />)}
-              </div>
+              <div className="space-y-2">{[1,2,3,4,5].map(i => <div key={i} className="h-12 bg-gray-100 rounded animate-pulse" />)}</div>
             ) : Object.keys(perms).length === 0 ? (
               <div className="py-16 text-center text-gray-400 text-sm">No permissions loaded.</div>
             ) : (
@@ -498,26 +436,19 @@ export default function UsersPage() {
                           <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full border text-xs font-semibold ${ROLE_BADGE[role]}`}>
                             {ROLE_ICON[role]} {role}
                           </span>
-                          {role === "ADMIN" && (
-                            <p className="text-xs text-gray-400 font-normal mt-0.5">locked</p>
-                          )}
+                          {role === "ADMIN" && <p className="text-xs text-gray-400 font-normal mt-0.5">locked</p>}
                         </th>
                       ))}
                     </tr>
-                    {/* Permission key sub-header */}
                     <tr className="border-b border-gray-100 bg-white">
                       <td className="px-4 py-1.5 text-xs text-gray-400">
                         <span className="inline-flex gap-1">
-                          {PERMS.map(p => (
-                            <span key={p} className={`px-1.5 py-0.5 rounded border text-xs font-bold ${PERM_ON[p]}`}>{PERM_SHORT[p]}</span>
-                          ))}
+                          {PERMS.map(p => <span key={p} className={`px-1.5 py-0.5 rounded border text-xs font-bold ${PERM_ON[p]}`}>{PERM_SHORT[p]}</span>)}
                           <span className="text-gray-400 ml-1">= {PERMS.map(p => PERM_LABEL[p]).join(" / ")}</span>
                         </span>
                       </td>
                       {ROLES.map(role => (
-                        <td key={role} colSpan={4} className="px-4 py-1.5 text-center text-xs text-gray-400">
-                          {PERMS.map(p => PERM_SHORT[p]).join("  ")}
-                        </td>
+                        <td key={role} colSpan={4} className="px-4 py-1.5 text-center text-xs text-gray-400">{PERMS.map(p => PERM_SHORT[p]).join("  ")}</td>
                       ))}
                     </tr>
                   </thead>
@@ -537,12 +468,10 @@ export default function UsersPage() {
                                   title={`${role} · ${mod.label} · ${PERM_LABEL[perm]}: ${granted ? "Granted" : "Denied"}`}
                                   disabled={locked || !isAdmin || spinning}
                                   onClick={() => !locked && isAdmin && togglePerm(role, mod.key, perm, granted)}
-                                  className={[
-                                    "w-8 h-8 rounded-md border text-xs font-bold transition-all",
+                                  className={["w-8 h-8 rounded-md border text-xs font-bold transition-all",
                                     granted ? PERM_ON[perm] : "bg-gray-100 text-gray-300 border-gray-200",
-                                    locked  ? "cursor-not-allowed opacity-80" : isAdmin ? "cursor-pointer hover:scale-110 active:scale-95" : "cursor-default",
-                                    spinning ? "animate-pulse" : "",
-                                  ].join(" ")}
+                                    locked ? "cursor-not-allowed opacity-80" : isAdmin ? "cursor-pointer hover:scale-110 active:scale-95" : "cursor-default",
+                                    spinning ? "animate-pulse" : ""].join(" ")}
                                 >
                                   {spinning ? "…" : PERM_SHORT[perm]}
                                 </button>
@@ -557,7 +486,6 @@ export default function UsersPage() {
               </div>
             )}
 
-            {/* Legend */}
             <div className="flex flex-wrap gap-4 text-xs text-gray-500 pt-1">
               {PERMS.map(p => (
                 <span key={p} className="flex items-center gap-1.5">
@@ -567,189 +495,188 @@ export default function UsersPage() {
               ))}
               <span className="flex items-center gap-1.5">
                 <span className="w-6 h-6 rounded border text-xs font-bold flex items-center justify-center bg-gray-100 text-gray-300 border-gray-200">V</span>
-                Permission denied (grayed)
+                Permission denied
               </span>
             </div>
+          </TabsContent>
 
-            {/* ── Custom Roles Section ───────────────────────────────────── */}
-            <div className="pt-4 border-t border-gray-200 space-y-4">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-800">Custom Roles</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">Create project-specific roles and configure module permissions. Assign them to users in the Users tab.</p>
-                </div>
+          {/* CUSTOM ROLES */}
+          <TabsContent value="custom-roles" className="space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="text-sm text-gray-600 bg-purple-50 border border-purple-200 rounded-lg px-4 py-2.5 flex-1">
+                {isAdmin
+                  ? "Create named roles (e.g. TESTER, DEVELOPER) and configure module-level permissions independently of system roles."
+                  : "Custom roles are defined by your admin. Contact your admin to request changes."}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={loadCustomRoles} disabled={customRolesLoading}>
+                  <RefreshCw className="h-3.5 w-3.5 mr-1" /> {customRolesLoading ? "Loading…" : "Refresh"}
+                </Button>
                 {isAdmin && (
-                  <Button size="sm" onClick={() => {
-                    setCrEditing(null)
-                    setCrForm({ name: "", description: "", color: "blue" })
-                    setCrDialogOpen(true)
-                  }}>
-                    <Plus className="h-3.5 w-3.5 mr-1" /> Create Role
-                  </Button>
+                  <Button size="sm" onClick={openNewCustomRole}><Plus className="h-4 w-4 mr-1" /> New Role</Button>
                 )}
               </div>
+            </div>
 
-              {customRolesLoading ? (
-                <div className="space-y-2">{[1,2].map(i => <div key={i} className="h-20 bg-gray-100 rounded animate-pulse" />)}</div>
-              ) : customRoles.length === 0 ? (
-                <div className="py-10 text-center text-gray-400 text-sm border-2 border-dashed border-gray-200 rounded-xl">
-                  No custom roles yet.{isAdmin && <> Click <strong>Create Role</strong> to add one.</>}
-                </div>
-              ) : (
-                <div className="space-y-4">
+            {customRolesLoading ? (
+              <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-12 bg-gray-100 rounded animate-pulse" />)}</div>
+            ) : customRoles.length === 0 ? (
+              <div className="py-16 text-center text-gray-400 text-sm">
+                No custom roles yet.{isAdmin && " Click \"New Role\" to create one."}
+              </div>
+            ) : (
+              <div className="flex gap-4">
+                {/* sidebar */}
+                <div className="w-[280px] shrink-0 space-y-2">
                   {customRoles.map(cr => {
-                    const c = colorCls(cr.color)
-                    const permMap: Record<string, any> = {}
-                    cr.permissions?.forEach((p: any) => { permMap[p.module] = p })
+                    const cc = colorCls(cr.color)
+                    const isSel = selectedCustomRole?.id === cr.id
                     return (
-                      <div key={cr.id} className="border border-gray-200 rounded-xl overflow-hidden">
-                        {/* Role header */}
-                        <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${c.bg} ${c.text} border ${c.border}`}>
-                              {cr.name}
-                            </span>
-                            {cr.description && <span className="text-xs text-gray-500">{cr.description}</span>}
-                            <span className="text-xs text-gray-400">({cr._count?.users ?? 0} user{cr._count?.users !== 1 ? "s" : ""})</span>
+                      <div
+                        key={cr.id}
+                        onClick={() => setSelectedCustomRole(cr)}
+                        className={["p-3 rounded-lg border cursor-pointer transition-all",
+                          isSel ? `${cc.bg} ${cc.border} shadow-sm` : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50"].join(" ")}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${cc.dot}`} />
+                            <span className={`text-sm font-semibold truncate ${isSel ? cc.text : "text-gray-800"}`}>{cr.name}</span>
                           </div>
-                          {isAdmin && (
-                            <div className="flex gap-1 shrink-0">
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
-                                setCrEditing(cr)
-                                setCrForm({ name: cr.name, description: cr.description ?? "", color: cr.color })
-                                setCrDialogOpen(true)
-                              }}>
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => deleteCustomRole(cr)}>
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          )}
+                          <span className="text-xs text-gray-400 shrink-0 ml-2">{cr._count?.users ?? 0} user{(cr._count?.users ?? 0) !== 1 ? "s" : ""}</span>
                         </div>
-                        {/* Permission matrix */}
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-xs min-w-[420px]">
-                            <thead>
-                              <tr className="border-b border-gray-100 bg-white">
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 w-44">Module</th>
-                                {PERMS.map(p => (
-                                  <th key={p} className="px-2 py-2 text-center w-12">
-                                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded border ${PERM_ON[p]}`}>{PERM_SHORT[p]}</span>
-                                  </th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                              {MODULES.map((mod, i) => {
-                                const mp = permMap[mod.key]
-                                return (
-                                  <tr key={mod.key} className={i % 2 === 1 ? "bg-gray-50/50" : "bg-white"}>
-                                    <td className="px-4 py-2 font-medium text-gray-700">{mod.label}</td>
-                                    {PERMS.map(perm => {
-                                      const granted  = mp?.[perm] ?? true
-                                      const tKey     = `${cr.id}_${mod.key}_${perm}`
-                                      const spinning = !!crToggles[tKey]
-                                      return (
-                                        <td key={perm} className="px-2 py-1.5 text-center">
-                                          <button
-                                            title={`${cr.name} · ${mod.label} · ${PERM_LABEL[perm]}: ${granted ? "Granted" : "Denied"}`}
-                                            disabled={!isAdmin || spinning}
-                                            onClick={() => isAdmin && toggleCustomPerm(cr.id, mod.key, perm, granted)}
-                                            className={[
-                                              "w-8 h-8 rounded-md border text-xs font-bold transition-all",
-                                              granted ? PERM_ON[perm] : "bg-gray-100 text-gray-300 border-gray-200",
-                                              isAdmin ? "cursor-pointer hover:scale-110 active:scale-95" : "cursor-default",
-                                              spinning ? "animate-pulse" : "",
-                                            ].join(" ")}
-                                          >
-                                            {spinning ? "…" : PERM_SHORT[perm]}
-                                          </button>
-                                        </td>
-                                      )
-                                    })}
-                                  </tr>
-                                )
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
+                        {cr.description && <p className={`text-xs mt-1 truncate ${isSel ? cc.text : "text-gray-500"}`}>{cr.description}</p>}
+                        {isAdmin && isSel && (
+                          <div className="flex gap-1 mt-2">
+                            <button onClick={(e) => { e.stopPropagation(); openEditCustomRole(cr) }}
+                              className="flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-white border border-gray-200 text-gray-600 hover:bg-gray-50">
+                              <Pencil className="h-3 w-3" /> Edit
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); handleDeleteCustomRole(cr) }}
+                              className="flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-white border border-red-200 text-red-600 hover:bg-red-50">
+                              <Trash2 className="h-3 w-3" /> Delete
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )
                   })}
                 </div>
-              )}
-            </div>
 
+                {/* permission matrix */}
+                {selectedCustomRole && (
+                  <div className="flex-1 overflow-x-auto rounded-xl border border-gray-200 self-start">
+                    <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
+                      <span className={`w-3 h-3 rounded-full ${colorCls(selectedCustomRole.color).dot}`} />
+                      <span className="font-semibold text-gray-800">{selectedCustomRole.name}</span>
+                      {selectedCustomRole.description && <span className="text-xs text-gray-400">{selectedCustomRole.description}</span>}
+                    </div>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-gray-50 border-b border-gray-200">
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Module</th>
+                          {PERMS.map(p => (
+                            <th key={p} className="px-3 py-3 text-center">
+                              <span className={`inline-flex items-center justify-center w-7 h-7 rounded border font-bold text-xs ${PERM_ON[p]}`}>{PERM_SHORT[p]}</span>
+                              <p className="text-[10px] font-normal text-gray-400 mt-0.5">{PERM_LABEL[p]}</p>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {MODULES.map((mod, i) => {
+                          const permRow = selectedCustomRole.permissions?.find((p: any) => p.module === mod.key)
+                          return (
+                            <tr key={mod.key} className={i % 2 === 1 ? "bg-gray-50/50" : "bg-white"}>
+                              <td className="px-4 py-3 text-sm font-medium text-gray-700 whitespace-nowrap">{mod.label}</td>
+                              {PERMS.map(perm => {
+                                const granted  = permRow?.[perm] ?? true
+                                const key      = `${selectedCustomRole.id}_${mod.key}_${perm}`
+                                const spinning = crTogglingKey === key
+                                return (
+                                  <td key={perm} className="px-3 py-2 text-center">
+                                    <button
+                                      title={`${mod.label} · ${PERM_LABEL[perm]}: ${granted ? "Granted" : "Denied"}`}
+                                      disabled={!isAdmin || spinning}
+                                      onClick={() => isAdmin && toggleCrPerm(selectedCustomRole.id, mod.key, perm, granted)}
+                                      className={["w-8 h-8 rounded-md border text-xs font-bold transition-all",
+                                        granted ? PERM_ON[perm] : "bg-gray-100 text-gray-300 border-gray-200",
+                                        isAdmin ? "cursor-pointer hover:scale-110 active:scale-95" : "cursor-default",
+                                        spinning ? "animate-pulse" : ""].join(" ")}
+                                    >
+                                      {spinning ? "…" : PERM_SHORT[perm]}
+                                    </button>
+                                  </td>
+                                )
+                              })}
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
 
-      {/* ── Add / Edit User Dialog ─────────────────────────────────────── */}
+      {/* Add / Edit User */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editing ? "Edit User" : "Add User"}</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>{editing ? "Edit User" : "Add User"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Name *</Label>
-                <Input
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="Full name"
-                />
+                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full name" />
               </div>
               <div className="space-y-1.5">
-                <Label>Role</Label>
-                <Select
-                  value={form.role}
-                  onValueChange={(v) => setForm({ ...form, role: v })}
-                  disabled={!isAdmin}
-                >
+                <Label>System Role</Label>
+                <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })} disabled={!isAdmin}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {editableRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                  </SelectContent>
+                  <SelectContent>{editableRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
                 </Select>
                 {!isAdmin && <p className="text-xs text-gray-400">Only Admins can change roles.</p>}
               </div>
             </div>
             <div className="space-y-1.5">
               <Label>Email *</Label>
-              <Input
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                placeholder="user@example.com"
-              />
+              <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="user@example.com" />
             </div>
+            {isAdmin && (
+              <div className="space-y-1.5">
+                <Label>Custom Role</Label>
+                <select
+                  value={form.customRoleId}
+                  onChange={(e) => setForm({ ...form, customRoleId: e.target.value })}
+                  className="w-full text-sm border border-gray-200 rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-purple-400"
+                >
+                  <option value="">— none —</option>
+                  {customRoles.map(cr => <option key={cr.id} value={cr.id}>{cr.name}</option>)}
+                </select>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label>{editing ? "New Password" : "Password *"}</Label>
-              <Input
-                type="password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                placeholder={editing ? "Leave blank to keep current" : "Set a password"}
-              />
+              <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
+                placeholder={editing ? "Leave blank to keep current" : "Set a password"} />
               {editing && <p className="text-xs text-gray-400">Leave blank to keep the current password.</p>}
             </div>
-
-            {/* Effective permissions preview (if editing an existing user) */}
             {editing && (
               <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
                 <p className="text-xs font-semibold text-gray-500 mb-2">Effective Permissions ({form.role})</p>
                 <div className="grid grid-cols-2 gap-1">
                   {MODULES.map(mod => {
-                    const rolePerms = perms[form.role]?.[mod.key]
-                    const allGrant  = form.role === "ADMIN"
+                    const rp = perms[form.role]?.[mod.key]
+                    const all = form.role === "ADMIN"
                     return (
                       <div key={mod.key} className="flex items-center justify-between gap-2 text-xs">
                         <span className="text-gray-600 truncate">{mod.label}</span>
                         <div className="flex gap-0.5 shrink-0">
                           {PERMS.map(p => {
-                            const on = allGrant || (rolePerms?.[p] ?? true)
+                            const on = all || (rp?.[p] ?? true)
                             return (
                               <span key={p} className={`w-5 h-5 rounded text-[10px] font-bold flex items-center justify-center border ${on ? PERM_ON[p] : "bg-gray-100 text-gray-300 border-gray-200"}`}>
                                 {PERM_SHORT[p]}
@@ -766,73 +693,43 @@ export default function UsersPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? "Saving…" : "Save"}
-            </Button>
+            <Button onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* ── Create / Edit Custom Role Dialog ───────────────────────────── */}
-      <Dialog open={crDialogOpen} onOpenChange={setCrDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{crEditing ? "Edit Role" : "Create Custom Role"}</DialogTitle>
-          </DialogHeader>
+
+      {/* Create / Edit Custom Role */}
+      <Dialog open={crOpen} onOpenChange={setCrOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>{crEditing ? "Edit Custom Role" : "Create Custom Role"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
               <Label>Role Name *</Label>
-              <Input
-                value={crForm.name}
-                onChange={e => setCrForm({ ...crForm, name: e.target.value })}
-                placeholder="e.g. TESTER, DEVELOPER, VIEWER"
-              />
-              <p className="text-xs text-gray-400">Name will be saved in uppercase.</p>
+              <Input value={crForm.name} onChange={(e) => setCrForm({ ...crForm, name: e.target.value })} placeholder="e.g. TESTER, DEVELOPER" />
             </div>
             <div className="space-y-1.5">
               <Label>Description</Label>
-              <Input
-                value={crForm.description}
-                onChange={e => setCrForm({ ...crForm, description: e.target.value })}
-                placeholder="Short description (optional)"
-              />
+              <Input value={crForm.description} onChange={(e) => setCrForm({ ...crForm, description: e.target.value })} placeholder="Optional short description" />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label>Color</Label>
-              <div className="flex gap-2 flex-wrap">
-                {COLOR_OPTIONS.map(c => {
-                  const cls = COLOR_MAP[c]
+              <div className="flex flex-wrap gap-2 pt-1">
+                {COLOR_KEYS.map(c => {
+                  const cc = colorCls(c)
                   return (
-                    <button
-                      key={c}
-                      onClick={() => setCrForm({ ...crForm, color: c })}
-                      title={c}
-                      className={[
-                        "w-7 h-7 rounded-full border-2 transition-transform hover:scale-110",
-                        cls.dot,
-                        crForm.color === c ? "border-gray-700 scale-110 ring-2 ring-offset-1 ring-gray-400" : "border-transparent",
-                      ].join(" ")}
+                    <button key={c} onClick={() => setCrForm({ ...crForm, color: c })} title={c}
+                      className={["w-7 h-7 rounded-full border-2 transition-transform hover:scale-110", cc.dot,
+                        crForm.color === c ? "border-gray-700 scale-110 ring-2 ring-offset-1 ring-gray-400" : "border-transparent"].join(" ")}
                     />
                   )
                 })}
               </div>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-gray-500">Preview:</span>
-                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${colorCls(crForm.color).bg} ${colorCls(crForm.color).text} ${colorCls(crForm.color).border}`}>
-                  {crForm.name || "Role Name"}
-                </span>
-              </div>
+              <p className="text-xs text-gray-400 capitalize">Selected: {crForm.color}</p>
             </div>
-            {!crEditing && (
-              <p className="text-xs text-gray-500 bg-blue-50 border border-blue-100 rounded-lg p-3">
-                All module permissions default to <strong>View / Create / Edit</strong> (Delete is off). Adjust them in the Roles &amp; Permissions tab after creation.
-              </p>
-            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCrDialogOpen(false)}>Cancel</Button>
-            <Button onClick={saveCustomRole} disabled={crSaving}>
-              {crSaving ? "Saving…" : crEditing ? "Update" : "Create Role"}
-            </Button>
+            <Button variant="outline" onClick={() => setCrOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveCustomRole} disabled={crSaving}>{crSaving ? "Saving…" : crEditing ? "Update" : "Create"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
