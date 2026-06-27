@@ -116,30 +116,38 @@ export default function UsersPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const params = new URLSearchParams()
-    if (roleFilter !== "all") params.set("role", roleFilter)
-    const r = await fetch(`/api/users?${params}`)
-    setData(await r.json())
+    try {
+      const r = await fetch(`/api/users?${roleFilter !== "all" ? `role=${roleFilter}` : ""}`)
+      if (r.ok) setData(await r.json())
+      else toast({ title: "Failed to load users", variant: "destructive" })
+    } catch { toast({ title: "Network error loading users", variant: "destructive" }) }
     setLoading(false)
-  }, [roleFilter])
+  }, [roleFilter, toast])
 
   useEffect(() => { load() }, [load])
 
   const loadPerms = useCallback(async () => {
     setPermsLoading(true)
-    const r = await fetch("/api/role-permissions")
-    setPerms(await r.json())
+    try {
+      const r = await fetch("/api/role-permissions")
+      if (r.ok) setPerms(await r.json())
+      else { const e = await r.json(); toast({ title: e.error ?? "Failed to load permissions", variant: "destructive" }) }
+    } catch { toast({ title: "Network error loading permissions", variant: "destructive" }) }
     setPermsLoading(false)
-  }, [])
+  }, [toast])
 
   const loadCustomRoles = useCallback(async () => {
     setCustomRolesLoading(true)
-    const r = await fetch("/api/custom-roles")
-    const list = await r.json()
-    setCustomRoles(list)
-    if (list.length > 0 && !selectedCustomRole) setSelectedCustomRole(list[0])
+    try {
+      const r = await fetch("/api/custom-roles")
+      if (r.ok) {
+        const list = await r.json()
+        setCustomRoles(list)
+        if (list.length > 0 && !selectedCustomRole) setSelectedCustomRole(list[0])
+      } else { const e = await r.json(); toast({ title: e.error ?? "Failed to load custom roles", variant: "destructive" }) }
+    } catch { toast({ title: "Network error loading custom roles", variant: "destructive" }) }
     setCustomRolesLoading(false)
-  }, [selectedCustomRole])
+  }, [selectedCustomRole, toast])
 
   function canEdit(row: any) {
     if (isAdmin) return true
