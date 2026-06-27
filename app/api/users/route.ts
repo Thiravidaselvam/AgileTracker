@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   const users = await db.user.findMany({
     where: role ? { role: role as any } : undefined,
-    select: { id: true, name: true, email: true, role: true, createdAt: true, updatedAt: true },
+    select: { id: true, name: true, email: true, role: true, createdAt: true, updatedAt: true, customRoleId: true, customRole: { select: { id: true, name: true, color: true } } },
     orderBy: { name: "asc" },
   })
 

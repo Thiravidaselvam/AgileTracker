@@ -27,7 +27,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (callerRole === "MANAGER" && !isSelf && target.role !== "MEMBER")
     return NextResponse.json({ error: "Managers can only edit Member accounts" }, { status: 403 })
 
-  const { name, email, password, role } = await req.json()
+  const { name, email, password, role, customRoleId } = await req.json()
 
   if (!name || !email)
     return NextResponse.json({ error: "Name and email are required" }, { status: 400 })
@@ -41,11 +41,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const data: any = { name, email, role: newRole }
   if (password) data.passwordHash = await bcrypt.hash(password, 10)
+  if (callerRole === "ADMIN") data.customRoleId = customRoleId ?? null
 
   const user = await db.user.update({
     where: { id },
     data,
-    select: { id: true, name: true, email: true, role: true, createdAt: true, updatedAt: true },
+    select: { id: true, name: true, email: true, role: true, createdAt: true, updatedAt: true, customRoleId: true, customRole: { select: { id: true, name: true, color: true } } },
   })
 
   return NextResponse.json(user)

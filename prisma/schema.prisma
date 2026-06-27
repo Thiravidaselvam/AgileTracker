@@ -51,6 +51,8 @@ model User {
   changeRequests  ChangeRequest[]
   signOffDocs     SignOffDocument[]
   goLiveChecklists GoLiveChecklist[]
+  customRoleId    String?
+  customRole      CustomRole? @relation(fields: [customRoleId], references: [id])
 }
 
 model Requirement {
@@ -306,6 +308,32 @@ model RolePermission {
   updatedAt DateTime @updatedAt
 
   @@unique([role, module])
+}
+
+model CustomRole {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  color       String   @default("slate")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permissions CustomRolePermission[]
+  users       User[]
+}
+
+model CustomRolePermission {
+  id        String     @id @default(cuid())
+  roleId    String
+  role      CustomRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  module    String
+  canView   Boolean    @default(true)
+  canCreate Boolean    @default(true)
+  canEdit   Boolean    @default(true)
+  canDelete Boolean    @default(false)
+  updatedAt DateTime   @updatedAt
+
+  @@unique([roleId, module])
 }
 
 // ─── ERP Implementation Tracker ─────────────────────────────────────────────
