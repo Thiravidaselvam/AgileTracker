@@ -1,0 +1,40 @@
+❯ ngrok
+
+                                                    (Ctrl+C to quit)
+
+
+                                                              Request
+  early access to new features: https://dashboard.ngrok.com/early-access
+
+
+
+
+                                                      Session Status
+           online
+
+                                                Account
+     Thiravida Selvam (Plan: Free)
+
+                                          Version
+  3.39.8
+
+                                      Region                        India
+  (in)
+
+                                Latency                       93ms
+
+
+                          Web Interface
+  http://127.0.0.1:4040
+
+                                      Forwarding
+  https://finalize-domestic-broaden.ngrok-free.dev -> http://localhost:8080
+
+
+
+
+                                Connections                   ttl     opn
+     rt1     rt5     p50     p90
+
+                                                        0       0
+  0.00    0.00    0.00    0.00
