@@ -39,6 +39,8 @@ postgresql://neondb_owner:npg_jWPGiOS1gQ8o@ep-solitary-waterfall-atkt6nus.c-9.us
 | Team / Org | `thiravidam-s-projects` |
 | Project name | `agile-tracker` |
 | Project ID | `prj_tsRoaJB2ZnLj8dTWRAaeJTNpWqIX` |
+| Latest Deployment ID | `dpl_9NCmjYWUvRiQk9kRLMuc6zqtxKGr` |
+| Last Deployed | 2026-06-29 |
 | Production URL | https://agile-tracker-red.vercel.app |
 | Region | Washington D.C., USA (iad1) |
 
@@ -54,11 +56,11 @@ postgresql://neondb_owner:npg_jWPGiOS1gQ8o@ep-solitary-waterfall-atkt6nus.c-9.us
 | `DATABASE_URL_UNPOOLED` | `postgresql://neondb_owner:npg_jWPGiOS1gQ8o@ep-solitary-waterfall-atkt6nus.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require` |
 | `NEXTAUTH_URL` | `https://agile-tracker-red.vercel.app` |
 | `NEXTAUTH_SECRET` | `ZfPWIuAFU5I7NmkZj/4GF7qtDBuAoHZEMFRAlj9RllI=` |
-| `SMTP_HOST` | _(not configured yet)_ |
-| `SMTP_PORT` | _(not configured yet)_ |
-| `SMTP_USER` | _(not configured yet)_ |
-| `SMTP_PASS` | _(not configured yet)_ |
-| `MANAGER_EMAIL` | _(not configured yet)_ |
+| `SMTP_HOST` | `smtp.gmail.com` |
+| `SMTP_PORT` | `587` |
+| `SMTP_USER` | `thiravidaselvams@gmail.com` |
+| `SMTP_PASS` | _(add here)_ |
+| `MANAGER_EMAIL` | _(add here)_ |
 
 ---
 
