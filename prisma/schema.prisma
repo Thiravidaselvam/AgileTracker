@@ -1,0 +1,420 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+  MANAGER
+}
+
+enum Priority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum Severity {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum ModuleType {
+  REQUIREMENT
+  ISSUE
+  TEST_ITEM
+  SUPPORT
+  ACTION_ITEM
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(MEMBER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  requirements    Requirement[]
+  issues          Issue[]
+  testItems       TestItem[]
+  supportTickets  SupportTicket[]
+  actionItems     ActionItem[]
+  progressLogs    ProgressLog[]
+  reportShares    ReportShare[]
+  changeRequests  ChangeRequest[]
+  signOffDocs     SignOffDocument[]
+  goLiveChecklists GoLiveChecklist[]
+  customRoleId    String?
+  customRole      CustomRole? @relation(fields: [customRoleId], references: [id])
+}
+
+model Requirement {
+  id               String    @id @default(cuid())
+  reqId            String    @unique
+  module           String
+  requirement      String    @db.Text
+  requestor        String
+  priority         Priority  @default(MEDIUM)
+  status           String    @default("Open")
+  ownerId          String?
+  owner            User?     @relation(fields: [ownerId], references: [id])
+  createdDate      DateTime  @default(now())
+  targetDate       DateTime?
+  actualCompletion DateTime?
+  remarks          String?   @db.Text
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  progressLogs ProgressLog[]
+}
+
+model Issue {
+  id          String    @id @default(cuid())
+  issueId     String    @unique
+  module      String    @default("")
+  description String    @db.Text
+  severity    Severity  @default(MEDIUM)
+  reportedBy  String
+  ownerId     String?
+  owner       User?     @relation(fields: [ownerId], references: [id])
+  status      String    @default("Open")
+  openDate    DateTime  @default(now())
+  dueDate     DateTime?
+  daysOpen    Int       @default(0)
+  resolution  String?   @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  testItems    TestItem[]
+  progressLogs ProgressLog[]
+}
+
+model TestItem {
+  id            String    @id @default(cuid())
+  testId        String    @unique
+  module        String
+  subModule     String?
+  issueTitle    String
+  description   String    @db.Text
+  testedBy      String
+  priority      Priority  @default(MEDIUM)
+  status        String    @default("Open")
+  ownerId       String?
+  owner         User?     @relation(fields: [ownerId], references: [id])
+  createdDate   DateTime  @default(now())
+  targetDate    DateTime?
+  linkedIssueId String?
+  linkedIssue   Issue?    @relation(fields: [linkedIssueId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  progressLogs ProgressLog[]
+}
+
+model Sprint {
+  id               String   @id @default(cuid())
+  sprintName       String   @unique
+  startDate        DateTime
+  endDate          DateTime
+  plannedStories   Int      @default(0)
+  completedStories Int      @default(0)
+  velocityPct      Float    @default(0)
+  sprintStatus     String   @default("Planning")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model SupportTicket {
+  id               String    @id @default(cuid())
+  customer         String
+  product          String
+  requirement      String    @db.Text
+  requestor        String
+  priority         Priority  @default(MEDIUM)
+  status           String    @default("Open")
+  ownerId          String?
+  owner            User?     @relation(fields: [ownerId], references: [id])
+  createdDate      DateTime  @default(now())
+  targetDate       DateTime?
+  actualCompletion DateTime?
+  remarks          String?   @db.Text
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  progressLogs ProgressLog[]
+}
+
+model ActionItem {
+  id          String    @id @default(cuid())
+  type        String
+  description String    @db.Text
+  ownerId     String?
+  owner       User?     @relation(fields: [ownerId], references: [id])
+  dueDate     DateTime?
+  status      String    @default("Open")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  progressLogs ProgressLog[]
+}
+
+model ProgressLog {
+  id              String     @id @default(cuid())
+  moduleType      ModuleType
+  recordId        String
+  changedById     String?
+  changedBy       User?         @relation(fields: [changedById], references: [id])
+  oldStatus       String?
+  newStatus       String?
+  notes           String?       @db.Text
+  loggedAt        DateTime      @default(now())
+  requirementId   String?
+  requirement     Requirement?  @relation(fields: [requirementId], references: [id])
+  issueId         String?
+  issue           Issue?        @relation(fields: [issueId], references: [id])
+  testItemId      String?
+  testItem        TestItem?     @relation(fields: [testItemId], references: [id])
+  supportTicketId String?
+  supportTicket   SupportTicket? @relation(fields: [supportTicketId], references: [id])
+  actionItemId    String?
+  actionItem      ActionItem?   @relation(fields: [actionItemId], references: [id])
+}
+
+model SignOffDocument {
+  id          String        @id @default(cuid())
+  docId       String        @unique
+  title       String
+  project     String
+  module      String?
+  docDate     DateTime?
+  description String?       @db.Text
+  status      String        @default("Draft")
+  createdById String?
+  createdBy   User?         @relation(fields: [createdById], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  items       SignOffItem[]
+}
+
+model SignOffItem {
+  id          String          @id @default(cuid())
+  documentId  String
+  document    SignOffDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  sno         Int
+  section     String
+  menuItem    String
+  description String?         @db.Text
+  status      String          @default("Pending")
+  approvedBy  String?
+  signOffDate DateTime?
+  remarks     String?         @db.Text
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model ChangeRequest {
+  id               String    @id @default(cuid())
+  crId             String    @unique
+  title            String
+  description      String    @db.Text
+  reason           String    @db.Text
+  impact           String?   @db.Text
+  priority         Priority  @default(MEDIUM)
+  status           String    @default("Submitted")
+  requestedBy      String
+  ownerId          String?
+  owner            User?     @relation(fields: [ownerId], references: [id])
+  estimatedEffort  String?
+  targetDate       DateTime?
+  actualCompletion DateTime?
+  remarks          String?   @db.Text
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model GoLiveChecklist {
+  id          String       @id @default(cuid())
+  checklistId String       @unique
+  title       String
+  project     String
+  goLiveDate  DateTime
+  description String?      @db.Text
+  status      String       @default("Planning")
+  createdById String?
+  createdBy   User?        @relation(fields: [createdById], references: [id])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  items       GoLiveItem[]
+}
+
+model GoLiveItem {
+  id          String          @id @default(cuid())
+  checklistId String
+  checklist   GoLiveChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+  phase       String
+  category    String
+  task        String
+  description String?         @db.Text
+  owner       String?
+  dueDateTime DateTime?
+  priority    String          @default("High")
+  status      String          @default("Not Started")
+  dependency  String?
+  remarks     String?         @db.Text
+  order       Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model TestRunnerImport {
+  id                    String   @id @default(cuid())
+  importedAt            DateTime @default(now())
+  fileName              String   @default("")
+  reset                 Int      @default(0)
+  totalTestItemsUpdated Int      @default(0)
+  sheets                Json     @default("[]")
+  rows                  Json     @default("[]")
+  summaryRows           Json     @default("[]")
+}
+
+model ReportShare {
+  id         String    @id @default(cuid())
+  reportType String
+  reportDate DateTime
+  sentTo     String[]
+  sentById   String?
+  sentBy     User?     @relation(fields: [sentById], references: [id])
+  pdfUrl     String?
+  shareToken String?   @unique
+  expiresAt  DateTime?
+  sentAt     DateTime  @default(now())
+}
+
+model RolePermission {
+  id        String   @id @default(cuid())
+  role      Role
+  module    String
+  canView   Boolean  @default(true)
+  canCreate Boolean  @default(true)
+  canEdit   Boolean  @default(true)
+  canDelete Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+
+  @@unique([role, module])
+}
+
+model CustomRole {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  color       String   @default("slate")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permissions CustomRolePermission[]
+  users       User[]
+}
+
+model CustomRolePermission {
+  id        String     @id @default(cuid())
+  roleId    String
+  role      CustomRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  module    String
+  canView   Boolean    @default(true)
+  canCreate Boolean    @default(true)
+  canEdit   Boolean    @default(true)
+  canDelete Boolean    @default(false)
+  updatedAt DateTime   @updatedAt
+
+  @@unique([roleId, module])
+}
+
+// ─── ERP Implementation Tracker ─────────────────────────────────────────────
+
+model ErpProject {
+  id           String        @id @default(cuid())
+  projectName  String        @default("[Project Name]")
+  clientName   String        @default("[Client Name]")
+  erpSoftware  String        @default("[ERP Software Name]")
+  partner      String        @default("[Your Company Name]")
+  startDate    DateTime?
+  goLiveDate   DateTime?
+  pm           String?
+  clientPoc    String?
+  notes        String?       @db.Text
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  phases       ErpPhase[]
+  documents    ErpDocument[]
+  risks        ErpRisk[]
+}
+
+model ErpPhase {
+  id          String     @id @default(cuid())
+  projectId   String
+  project     ErpProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  phaseNumber Int
+  phaseName   String
+  status      String     @default("Not Started")
+  startDate   DateTime?
+  endDate     DateTime?
+  order       Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  tasks       ErpTask[]
+}
+
+model ErpTask {
+  id        String    @id @default(cuid())
+  phaseId   String
+  phase     ErpPhase  @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  section   String
+  taskName  String
+  taskType  String    @default("activity")
+  status    String    @default("Pending")
+  owner     String?
+  dueDate   DateTime?
+  notes     String?   @db.Text
+  order     Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model ErpDocument {
+  id          String     @id @default(cuid())
+  projectId   String
+  project     ErpProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  docNumber   Int
+  category    String
+  title       String
+  preparedBy  String?
+  status      String     @default("Pending")
+  notes       String?
+  fileName    String?
+  fileSize    Int?
+  fileData    Bytes?
+  uploadedAt  DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model ErpRisk {
+  id          String     @id @default(cuid())
+  projectId   String
+  project     ErpProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  riskNumber  Int
+  description String     @db.Text
+  probability String     @default("Medium")
+  impact      String     @default("Medium")
+  mitigation  String?    @db.Text
+  status      String     @default("Open")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
