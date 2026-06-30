@@ -12,9 +12,14 @@ import { useToast } from "@/components/ui/use-toast"
 import { formatDate } from "@/lib/utils"
 import { Plus, Search } from "lucide-react"
 
-const STATUSES   = ["Open", "In Progress", "Closed"]
+const STATUSES   = ["Open", "In Progress", "Hold", "Fixed", "Closed"]
 const PRIORITIES = ["HIGH", "MEDIUM", "LOW"]
-const emptyForm  = { testId: "", module: "", subModule: "", issueTitle: "", description: "", testedBy: "", priority: "MEDIUM", status: "Open", targetDate: "", ownerId: "" }
+
+const emptyForm = {
+  testId: "", module: "", subModule: "", issueTitle: "", description: "",
+  testedBy: "", priority: "MEDIUM", status: "Open",
+  targetDate: "", actualCompletion: "", ownerId: "",
+}
 
 export default function TestItemsPage() {
   const { toast } = useToast()
@@ -39,7 +44,7 @@ export default function TestItemsPage() {
   }
 
   const loadUsers = async () => {
-    const r = await fetch("/api/users")
+    const r   = await fetch("/api/users")
     const all = await r.json()
     setUsers(all.map((u: any) => ({ id: u.id, name: u.name })))
   }
@@ -50,11 +55,19 @@ export default function TestItemsPage() {
   function openNew() { setEditing(null); setForm(emptyForm); setOpen(true) }
   function openEdit(row: any) {
     setEditing(row)
-    setForm({ testId: row.testId, module: row.module, subModule: row.subModule ?? "",
-      issueTitle: row.issueTitle, description: row.description, testedBy: row.testedBy,
-      priority: row.priority, status: row.status,
-      targetDate: row.targetDate ? row.targetDate.split("T")[0] : "",
-      ownerId: row.owner?.id ?? "" })
+    setForm({
+      testId:          row.testId,
+      module:          row.module,
+      subModule:       row.subModule ?? "",
+      issueTitle:      row.issueTitle,
+      description:     row.description,
+      testedBy:        row.testedBy,
+      priority:        row.priority,
+      status:          row.status,
+      targetDate:      row.targetDate       ? row.targetDate.split("T")[0]       : "",
+      actualCompletion:row.actualCompletion ? row.actualCompletion.split("T")[0] : "",
+      ownerId:         row.owner?.id ?? "",
+    })
     setOpen(true)
   }
 
@@ -76,16 +89,17 @@ export default function TestItemsPage() {
   }
 
   const columns = [
-    { key: "testId",      label: "Test ID",    className: "font-mono text-xs w-24" },
-    { key: "module",      label: "Module",     filter: { getVal: (r: any) => r.module ?? "" } },
-    { key: "subModule",   label: "Sub Module", render: (r: any) => r.subModule ?? "—" },
-    { key: "issueTitle",  label: "Issue",      render: (r: any) => <span className="line-clamp-1 text-xs max-w-xs block">{r.issueTitle}</span> },
-    { key: "testedBy",    label: "Tested By",  filter: { getVal: (r: any) => r.testedBy ?? "" } },
-    { key: "createdDate", label: "Created",    filter: { getVal: (r: any) => formatDate(r.createdDate) }, render: (r: any) => formatDate(r.createdDate) },
-    { key: "priority",    label: "Priority",   filter: { getVal: (r: any) => r.priority ?? "" },          render: (r: any) => <PriorityBadge value={r.priority} /> },
-    { key: "status",      label: "Status",     filter: { getVal: (r: any) => r.status ?? "" },            render: (r: any) => <StatusBadge value={r.status} /> },
-    { key: "owner",       label: "Owner",      filter: { getVal: (r: any) => r.owner?.name ?? "" },       render: (r: any) => r.owner?.name ?? "—" },
-    { key: "targetDate",  label: "Target",     filter: { getVal: (r: any) => formatDate(r.targetDate) },  render: (r: any) => formatDate(r.targetDate) },
+    { key: "testId",          label: "Test ID",          className: "font-mono text-xs w-24" },
+    { key: "module",          label: "Module",            filter: { getVal: (r: any) => r.module ?? "" } },
+    { key: "subModule",       label: "Sub Module",        render: (r: any) => r.subModule ?? "—" },
+    { key: "issueTitle",      label: "Issue",             render: (r: any) => <span className="line-clamp-1 text-xs max-w-xs block">{r.issueTitle}</span> },
+    { key: "testedBy",        label: "Tested By",         filter: { getVal: (r: any) => r.testedBy ?? "" } },
+    { key: "createdDate",     label: "Created",           filter: { getVal: (r: any) => formatDate(r.createdDate) }, render: (r: any) => formatDate(r.createdDate) },
+    { key: "priority",        label: "Priority",          filter: { getVal: (r: any) => r.priority ?? "" },          render: (r: any) => <PriorityBadge value={r.priority} /> },
+    { key: "status",          label: "Status",            filter: { getVal: (r: any) => r.status ?? "" },            render: (r: any) => <StatusBadge value={r.status} /> },
+    { key: "owner",           label: "Owner",             filter: { getVal: (r: any) => r.owner?.name ?? "" },       render: (r: any) => r.owner?.name ?? "—" },
+    { key: "targetDate",      label: "Target",            filter: { getVal: (r: any) => formatDate(r.targetDate) },  render: (r: any) => formatDate(r.targetDate) },
+    { key: "actualCompletion",label: "Actual Completion", filter: { getVal: (r: any) => formatDate(r.actualCompletion) }, render: (r: any) => formatDate(r.actualCompletion) },
   ]
 
   return (
@@ -113,13 +127,23 @@ export default function TestItemsPage() {
           <TrackerTable columns={columns as any} data={data} onEdit={openEdit} onDelete={handleDelete} loading={loading} pageSize={20} />
         </div>
       </div>
+
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>{editing ? "Edit Test Item" : "Add Test Item"}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5"><Label>Test ID</Label><Input value={form.testId} onChange={(e) => setForm({ ...form, testId: e.target.value })} placeholder="Auto-generated" /></div>
-            <div className="space-y-1.5"><Label>Module *</Label><Input value={form.module} onChange={(e) => setForm({ ...form, module: e.target.value })} required /></div>
-            <div className="space-y-1.5"><Label>Sub Module</Label><Input value={form.subModule} onChange={(e) => setForm({ ...form, subModule: e.target.value })} /></div>
+            <div className="space-y-1.5">
+              <Label>Test ID</Label>
+              <Input value={form.testId} onChange={(e) => setForm({ ...form, testId: e.target.value })} placeholder="Auto-generated" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Module *</Label>
+              <Input value={form.module} onChange={(e) => setForm({ ...form, module: e.target.value })} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Sub Module</Label>
+              <Input value={form.subModule} onChange={(e) => setForm({ ...form, subModule: e.target.value })} />
+            </div>
             <div className="space-y-1.5">
               <Label>Tested By</Label>
               <Select value={form.testedBy} onValueChange={(v) => setForm({ ...form, testedBy: v })}>
@@ -129,13 +153,19 @@ export default function TestItemsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="col-span-2 space-y-1.5"><Label>Issue Title *</Label><Input value={form.issueTitle} onChange={(e) => setForm({ ...form, issueTitle: e.target.value })} required /></div>
-            <div className="col-span-2 space-y-1.5"><Label>Description *</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} required /></div>
+            <div className="col-span-2 space-y-1.5">
+              <Label>Issue Title *</Label>
+              <Input value={form.issueTitle} onChange={(e) => setForm({ ...form, issueTitle: e.target.value })} required />
+            </div>
+            <div className="col-span-2 space-y-1.5">
+              <Label>Description *</Label>
+              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} required />
+            </div>
             <div className="space-y-1.5">
               <Label>Priority</Label>
               <Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{["HIGH","MEDIUM","LOW"].map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+                <SelectContent>{PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
@@ -145,7 +175,6 @@ export default function TestItemsPage() {
                 <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5"><Label>Target Date</Label><Input type="date" value={form.targetDate} onChange={(e) => setForm({ ...form, targetDate: e.target.value })} /></div>
             <div className="space-y-1.5">
               <Label>Owner</Label>
               <Select value={form.ownerId} onValueChange={(v) => setForm({ ...form, ownerId: v })}>
@@ -154,6 +183,14 @@ export default function TestItemsPage() {
                   {users.map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Target Date</Label>
+              <Input type="date" value={form.targetDate} onChange={(e) => setForm({ ...form, targetDate: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Actual Completion</Label>
+              <Input type="date" value={form.actualCompletion} onChange={(e) => setForm({ ...form, actualCompletion: e.target.value })} />
             </div>
           </div>
           <DialogFooter>

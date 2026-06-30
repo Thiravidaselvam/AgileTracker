@@ -12,7 +12,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { formatDate } from "@/lib/utils"
 import { Plus, Search } from "lucide-react"
 
-const STATUSES  = ["Open", "In Progress", "Fixed", "Closed"]
+const STATUSES  = ["Open", "In Progress", "Fixed", "Done", "Hold", "Closed"]
 const PRIORITIES = ["HIGH", "MEDIUM", "LOW"]
 
 const emptyForm = { reqId: "", module: "", requirement: "", requestor: "", priority: "MEDIUM", status: "Open", targetDate: "", remarks: "" }

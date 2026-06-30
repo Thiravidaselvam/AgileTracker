@@ -13,9 +13,14 @@ import { formatDate } from "@/lib/utils"
 import { Plus, Search } from "lucide-react"
 import { differenceInDays } from "date-fns"
 
-const STATUSES   = ["Open", "Inprogress", "Completed", "Closed"]
+const STATUSES   = ["Open", "In Progress", "User Testing", "Completed", "Closed"]
 const PRIORITIES = ["HIGH", "MEDIUM", "LOW"]
-const emptyForm  = { customer: "", product: "", requirement: "", requestor: "", priority: "MEDIUM", status: "Open", targetDate: "", remarks: "" }
+
+const emptyForm = {
+  customer: "", product: "", requirement: "", requestor: "",
+  priority: "MEDIUM", status: "Open", ownerId: "",
+  targetDate: "", actualCompletion: "", remarks: "",
+}
 
 export default function SupportPage() {
   const { toast } = useToast()
@@ -40,7 +45,7 @@ export default function SupportPage() {
   }
 
   const loadUsers = async () => {
-    const r = await fetch("/api/users")
+    const r   = await fetch("/api/users")
     const all = await r.json()
     setUsers(all.map((u: any) => ({ id: u.id, name: u.name })))
   }
@@ -51,9 +56,18 @@ export default function SupportPage() {
   function openNew() { setEditing(null); setForm(emptyForm); setOpen(true) }
   function openEdit(row: any) {
     setEditing(row)
-    setForm({ customer: row.customer, product: row.product, requirement: row.requirement,
-      requestor: row.requestor, priority: row.priority, status: row.status,
-      targetDate: row.targetDate ? row.targetDate.split("T")[0] : "", remarks: row.remarks ?? "" })
+    setForm({
+      customer:        row.customer,
+      product:         row.product,
+      requirement:     row.requirement,
+      requestor:       row.requestor,
+      priority:        row.priority,
+      status:          row.status,
+      ownerId:         row.owner?.id ?? "",
+      targetDate:      row.targetDate       ? row.targetDate.split("T")[0]       : "",
+      actualCompletion:row.actualCompletion ? row.actualCompletion.split("T")[0] : "",
+      remarks:         row.remarks ?? "",
+    })
     setOpen(true)
   }
 
@@ -75,19 +89,20 @@ export default function SupportPage() {
   }
 
   const columns = [
-    { key: "customer",    label: "Customer",    className: "font-medium" },
-    { key: "product",     label: "Product" },
-    { key: "requirement", label: "Requirement", render: (r: any) => <span className="line-clamp-2 text-xs max-w-xs block">{r.requirement}</span> },
-    { key: "requestor",   label: "Requestor" },
-    { key: "createdDate", label: "Created",    filter: { getVal: (r: any) => formatDate(r.createdDate) }, render: (r: any) => formatDate(r.createdDate) },
-    { key: "priority",    label: "Priority",   filter: { getVal: (r: any) => r.priority ?? "" },          render: (r: any) => <PriorityBadge value={r.priority} /> },
-    { key: "status",      label: "Status",     filter: { getVal: (r: any) => r.status ?? "" },            render: (r: any) => <StatusBadge value={r.status} /> },
-    { key: "owner",       label: "Owner",      filter: { getVal: (r: any) => r.owner?.name ?? "" },       render: (r: any) => r.owner?.name ?? "—" },
-    { key: "targetDate",  label: "Target",     filter: { getVal: (r: any) => formatDate(r.targetDate) },  render: (r: any) => {
+    { key: "customer",        label: "Customer",          className: "font-medium" },
+    { key: "product",         label: "Product" },
+    { key: "requirement",     label: "Requirement",       render: (r: any) => <span className="line-clamp-2 text-xs max-w-xs block">{r.requirement}</span> },
+    { key: "requestor",       label: "Requestor" },
+    { key: "createdDate",     label: "Created",           filter: { getVal: (r: any) => formatDate(r.createdDate) },      render: (r: any) => formatDate(r.createdDate) },
+    { key: "priority",        label: "Priority",          filter: { getVal: (r: any) => r.priority ?? "" },               render: (r: any) => <PriorityBadge value={r.priority} /> },
+    { key: "status",          label: "Status",            filter: { getVal: (r: any) => r.status ?? "" },                 render: (r: any) => <StatusBadge value={r.status} /> },
+    { key: "owner",           label: "Owner",             filter: { getVal: (r: any) => r.owner?.name ?? "" },            render: (r: any) => r.owner?.name ?? "—" },
+    { key: "targetDate",      label: "Target",            filter: { getVal: (r: any) => formatDate(r.targetDate) },       render: (r: any) => {
       const d = r.targetDate ? new Date(r.targetDate) : null
-      const isOverdue = d && differenceInDays(d, new Date()) < 0 && !["Completed","Closed"].includes(r.status)
+      const isOverdue = d && differenceInDays(d, new Date()) < 0 && !["Completed", "Closed"].includes(r.status)
       return <span className={isOverdue ? "text-red-600 font-medium" : ""}>{formatDate(r.targetDate)}</span>
     }},
+    { key: "actualCompletion",label: "Actual Completion", filter: { getVal: (r: any) => formatDate(r.actualCompletion) }, render: (r: any) => formatDate(r.actualCompletion) },
   ]
 
   return (
@@ -115,19 +130,38 @@ export default function SupportPage() {
           <TrackerTable columns={columns as any} data={data} onEdit={openEdit} onDelete={handleDelete} loading={loading} pageSize={20} />
         </div>
       </div>
+
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>{editing ? "Edit Ticket" : "Add Support Ticket"}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5"><Label>Customer *</Label><Input value={form.customer} onChange={(e) => setForm({ ...form, customer: e.target.value })} required /></div>
-            <div className="space-y-1.5"><Label>Product *</Label><Input value={form.product} onChange={(e) => setForm({ ...form, product: e.target.value })} required /></div>
-            <div className="col-span-2 space-y-1.5"><Label>Requirement *</Label><Textarea value={form.requirement} onChange={(e) => setForm({ ...form, requirement: e.target.value })} rows={2} required /></div>
+            <div className="space-y-1.5">
+              <Label>Customer *</Label>
+              <Input value={form.customer} onChange={(e) => setForm({ ...form, customer: e.target.value })} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Product *</Label>
+              <Input value={form.product} onChange={(e) => setForm({ ...form, product: e.target.value })} required />
+            </div>
+            <div className="col-span-2 space-y-1.5">
+              <Label>Requirement *</Label>
+              <Textarea value={form.requirement} onChange={(e) => setForm({ ...form, requirement: e.target.value })} rows={2} required />
+            </div>
             <div className="space-y-1.5">
               <Label>Requestor</Label>
               <Select value={form.requestor} onValueChange={(v) => setForm({ ...form, requestor: v })}>
                 <SelectTrigger><SelectValue placeholder="Select requestor" /></SelectTrigger>
                 <SelectContent>
                   {users.map((u) => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Owner</Label>
+              <Select value={form.ownerId} onValueChange={(v) => setForm({ ...form, ownerId: v })}>
+                <SelectTrigger><SelectValue placeholder="Select owner" /></SelectTrigger>
+                <SelectContent>
+                  {users.map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -145,8 +179,18 @@ export default function SupportPage() {
                 <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5"><Label>Target Date</Label><Input type="date" value={form.targetDate} onChange={(e) => setForm({ ...form, targetDate: e.target.value })} /></div>
-            <div className="col-span-2 space-y-1.5"><Label>Remarks</Label><Textarea value={form.remarks} onChange={(e) => setForm({ ...form, remarks: e.target.value })} rows={2} /></div>
+            <div className="space-y-1.5">
+              <Label>Target Date</Label>
+              <Input type="date" value={form.targetDate} onChange={(e) => setForm({ ...form, targetDate: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Actual Completion</Label>
+              <Input type="date" value={form.actualCompletion} onChange={(e) => setForm({ ...form, actualCompletion: e.target.value })} />
+            </div>
+            <div className="col-span-2 space-y-1.5">
+              <Label>Remarks</Label>
+              <Textarea value={form.remarks} onChange={(e) => setForm({ ...form, remarks: e.target.value })} rows={2} />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>

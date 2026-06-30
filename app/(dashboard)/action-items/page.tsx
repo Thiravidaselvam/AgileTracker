@@ -14,12 +14,15 @@ import { Plus, Search } from "lucide-react"
 import { differenceInDays } from "date-fns"
 
 const STATUSES = ["Open", "In Progress", "Completed", "Closed"]
-const emptyForm = { type: "", description: "", dueDate: "", status: "Open" }
+
+const emptyForm = { type: "", description: "", ownerId: "", dueDate: "", status: "Open" }
 
 export default function ActionItemsPage() {
   const { toast } = useToast()
   const [data, setData]       = useState<any[]>([])
+  const [users, setUsers]     = useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = useState(true)
+  const [search, setSearch]   = useState("")
   const [status, setStatus]   = useState("all")
   const [open, setOpen]       = useState(false)
   const [editing, setEditing] = useState<any | null>(null)
@@ -35,13 +38,25 @@ export default function ActionItemsPage() {
     setLoading(false)
   }
 
+  const loadUsers = async () => {
+    const r   = await fetch("/api/users")
+    const all = await r.json()
+    setUsers(all.map((u: any) => ({ id: u.id, name: u.name })))
+  }
+
   useEffect(() => { load() }, [status])
+  useEffect(() => { loadUsers() }, [])
 
   function openNew() { setEditing(null); setForm(emptyForm); setOpen(true) }
   function openEdit(row: any) {
     setEditing(row)
-    setForm({ type: row.type, description: row.description,
-      dueDate: row.dueDate ? row.dueDate.split("T")[0] : "", status: row.status })
+    setForm({
+      type:        row.type,
+      description: row.description,
+      ownerId:     row.owner?.id ?? "",
+      dueDate:     row.dueDate ? row.dueDate.split("T")[0] : "",
+      status:      row.status,
+    })
     setOpen(true)
   }
 
@@ -65,16 +80,16 @@ export default function ActionItemsPage() {
   const columns = [
     { key: "type",        label: "Type",        className: "font-medium w-32", filter: { getVal: (r: any) => r.type ?? "" } },
     { key: "description", label: "Description", render: (r: any) => <span className="line-clamp-2 text-xs max-w-sm block">{r.description}</span> },
-    { key: "owner",       label: "Owner",       filter: { getVal: (r: any) => r.owner?.name ?? "" },  render: (r: any) => r.owner?.name ?? "—" },
-    { key: "createdAt",   label: "Created",     filter: { getVal: (r: any) => formatDate(r.createdAt) }, render: (r: any) => formatDate(r.createdAt) },
-    { key: "dueDate",     label: "Due",         filter: { getVal: (r: any) => formatDate(r.dueDate) }, render: (r: any) => {
-      const d = r.dueDate ? new Date(r.dueDate) : null
-      const overdue = d && differenceInDays(d, new Date()) < 0 && !["Completed","Closed"].includes(r.status)
+    { key: "owner",       label: "Owner",       filter: { getVal: (r: any) => r.owner?.name ?? "" },      render: (r: any) => r.owner?.name ?? "—" },
+    { key: "createdAt",   label: "Created",     filter: { getVal: (r: any) => formatDate(r.createdAt) },  render: (r: any) => formatDate(r.createdAt) },
+    { key: "dueDate",     label: "Due",         filter: { getVal: (r: any) => formatDate(r.dueDate) },    render: (r: any) => {
+      const d       = r.dueDate ? new Date(r.dueDate) : null
+      const overdue = d && differenceInDays(d, new Date()) < 0 && !["Completed", "Closed"].includes(r.status)
       const daysLeft = d ? differenceInDays(d, new Date()) : null
       return (
         <span className={overdue ? "text-red-600 font-medium" : ""}>
           {formatDate(r.dueDate)}
-          {daysLeft !== null && !["Completed","Closed"].includes(r.status) && (
+          {daysLeft !== null && !["Completed", "Closed"].includes(r.status) && (
             <span className="ml-1 text-xs text-gray-400">({overdue ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft}d left`})</span>
           )}
         </span>
@@ -88,6 +103,10 @@ export default function ActionItemsPage() {
       <Header title="Action Items" />
       <div className="flex-1 p-6 space-y-4 overflow-y-auto">
         <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-48">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
+            <Input placeholder="Search action items…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8" />
+          </div>
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger className="w-40"><SelectValue placeholder="Filter by status" /></SelectTrigger>
             <SelectContent>
@@ -95,7 +114,6 @@ export default function ActionItemsPage() {
               {STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
             </SelectContent>
           </Select>
-          <div className="flex-1" />
           <Button onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Add</Button>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -105,21 +123,42 @@ export default function ActionItemsPage() {
           <TrackerTable columns={columns as any} data={data} onEdit={openEdit} onDelete={handleDelete} loading={loading} pageSize={20} />
         </div>
       </div>
+
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>{editing ? "Edit Action Item" : "Add Action Item"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5"><Label>Type *</Label><Input value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} placeholder="e.g. Follow-up, Risk…" required /></div>
-              <div className="space-y-1.5"><Label>Due Date</Label><Input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} /></div>
+              <div className="space-y-1.5">
+                <Label>Type *</Label>
+                <Input value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} placeholder="e.g. Follow-up, Risk…" required />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Due Date</Label>
+                <Input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} />
+              </div>
             </div>
-            <div className="space-y-1.5"><Label>Description *</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} required /></div>
             <div className="space-y-1.5">
-              <Label>Status</Label>
-              <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-              </Select>
+              <Label>Description *</Label>
+              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} required />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Owner</Label>
+                <Select value={form.ownerId} onValueChange={(v) => setForm({ ...form, ownerId: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select owner" /></SelectTrigger>
+                  <SelectContent>
+                    {users.map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
           <DialogFooter>

@@ -76,44 +76,46 @@ model Requirement {
 }
 
 model Issue {
-  id          String    @id @default(cuid())
-  issueId     String    @unique
-  module      String    @default("")
-  description String    @db.Text
-  severity    Severity  @default(MEDIUM)
-  reportedBy  String
-  ownerId     String?
-  owner       User?     @relation(fields: [ownerId], references: [id])
-  status      String    @default("Open")
-  openDate    DateTime  @default(now())
-  dueDate     DateTime?
-  daysOpen    Int       @default(0)
-  resolution  String?   @db.Text
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  issueId          String    @unique
+  module           String    @default("")
+  description      String    @db.Text
+  severity         Severity  @default(MEDIUM)
+  reportedBy       String
+  ownerId          String?
+  owner            User?     @relation(fields: [ownerId], references: [id])
+  status           String    @default("Open")
+  openDate         DateTime  @default(now())
+  dueDate          DateTime?
+  daysOpen         Int       @default(0)
+  actualCompletion DateTime?
+  resolution       String?   @db.Text
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   testItems    TestItem[]
   progressLogs ProgressLog[]
 }
 
 model TestItem {
-  id            String    @id @default(cuid())
-  testId        String    @unique
-  module        String
-  subModule     String?
-  issueTitle    String
-  description   String    @db.Text
-  testedBy      String
-  priority      Priority  @default(MEDIUM)
-  status        String    @default("Open")
-  ownerId       String?
-  owner         User?     @relation(fields: [ownerId], references: [id])
-  createdDate   DateTime  @default(now())
-  targetDate    DateTime?
-  linkedIssueId String?
-  linkedIssue   Issue?    @relation(fields: [linkedIssueId], references: [id])
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  testId           String    @unique
+  module           String
+  subModule        String?
+  issueTitle       String
+  description      String    @db.Text
+  testedBy         String
+  priority         Priority  @default(MEDIUM)
+  status           String    @default("Open")
+  ownerId          String?
+  owner            User?     @relation(fields: [ownerId], references: [id])
+  createdDate      DateTime  @default(now())
+  targetDate       DateTime?
+  actualCompletion DateTime?
+  linkedIssueId    String?
+  linkedIssue      Issue?    @relation(fields: [linkedIssueId], references: [id])
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   progressLogs ProgressLog[]
 }

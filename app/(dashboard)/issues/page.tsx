@@ -13,16 +13,20 @@ import { useToast } from "@/components/ui/use-toast"
 import { formatDate } from "@/lib/utils"
 import { Plus, Search } from "lucide-react"
 
-const STATUSES  = ["Open", "In Progress", "completed", "closed"]
+const STATUSES   = ["Open", "In Progress", "Fixed", "Closed"]
 const SEVERITIES = ["HIGH", "MEDIUM", "LOW"]
 
-const emptyForm = { issueId: "", module: "", description: "", severity: "MEDIUM", reportedBy: "", status: "Open", dueDate: "", resolution: "" }
+const emptyForm = {
+  issueId: "", module: "", description: "", severity: "MEDIUM",
+  reportedBy: "", ownerId: "", status: "Open",
+  dueDate: "", actualCompletion: "", resolution: "",
+}
 
 const KANBAN_COLS = [
-  { key: "Open",        label: "Open",       color: "border-blue-300 bg-blue-50" },
-  { key: "In Progress", label: "In Progress", color: "border-yellow-300 bg-yellow-50" },
-  { key: "completed",   label: "Resolved",   color: "border-green-300 bg-green-50" },
-  { key: "closed",      label: "Closed",     color: "border-gray-300 bg-gray-50" },
+  { key: "Open",        label: "Open",        color: "border-blue-300 bg-blue-50" },
+  { key: "In Progress", label: "In Progress",  color: "border-yellow-300 bg-yellow-50" },
+  { key: "Fixed",       label: "Fixed",        color: "border-green-300 bg-green-50" },
+  { key: "Closed",      label: "Closed",       color: "border-gray-300 bg-gray-50" },
 ]
 
 export default function IssuesPage() {
@@ -48,7 +52,7 @@ export default function IssuesPage() {
   }
 
   const loadUsers = async () => {
-    const r = await fetch("/api/users")
+    const r   = await fetch("/api/users")
     const all = await r.json()
     setUsers(all.map((u: any) => ({ id: u.id, name: u.name })))
   }
@@ -59,9 +63,18 @@ export default function IssuesPage() {
   function openNew() { setEditing(null); setForm(emptyForm); setOpen(true) }
   function openEdit(row: any) {
     setEditing(row)
-    setForm({ issueId: row.issueId, module: row.module ?? "", description: row.description, severity: row.severity,
-      reportedBy: row.reportedBy, status: row.status,
-      dueDate: row.dueDate ? row.dueDate.split("T")[0] : "", resolution: row.resolution ?? "" })
+    setForm({
+      issueId:         row.issueId,
+      module:          row.module ?? "",
+      description:     row.description,
+      severity:        row.severity,
+      reportedBy:      row.reportedBy,
+      ownerId:         row.owner?.id ?? "",
+      status:          row.status,
+      dueDate:         row.dueDate         ? row.dueDate.split("T")[0]         : "",
+      actualCompletion:row.actualCompletion ? row.actualCompletion.split("T")[0]: "",
+      resolution:      row.resolution ?? "",
+    })
     setOpen(true)
   }
 
@@ -83,16 +96,17 @@ export default function IssuesPage() {
   }
 
   const columns = [
-    { key: "issueId",     label: "ID",          className: "font-mono text-xs w-24" },
-    { key: "module",      label: "Module",       filter: { getVal: (r: any) => r.module ?? "" } },
-    { key: "description", label: "Description",  render: (r: any) => <span className="line-clamp-2 text-xs max-w-xs block">{r.description}</span> },
-    { key: "severity",    label: "Severity",     filter: { getVal: (r: any) => r.severity ?? "" },           render: (r: any) => <SeverityBadge value={r.severity} /> },
-    { key: "reportedBy",  label: "Reported By",  className: "whitespace-nowrap" },
-    { key: "openDate",    label: "Open Date",    filter: { getVal: (r: any) => formatDate(r.openDate) },     render: (r: any) => formatDate(r.openDate) },
-    { key: "status",      label: "Status",       filter: { getVal: (r: any) => r.status ?? "" },             render: (r: any) => <StatusBadge value={r.status} /> },
-    { key: "owner",       label: "Owner",        filter: { getVal: (r: any) => r.owner?.name ?? "" },        render: (r: any) => r.owner?.name ?? "—" },
-    { key: "daysOpen",    label: "Days Open",    render: (r: any) => <span className={r.daysOpen > 7 ? "text-red-600 font-medium" : ""}>{r.daysOpen}d</span> },
-    { key: "dueDate",     label: "Due",          filter: { getVal: (r: any) => formatDate(r.dueDate) },      render: (r: any) => formatDate(r.dueDate) },
+    { key: "issueId",          label: "ID",               className: "font-mono text-xs w-24" },
+    { key: "module",           label: "Module",            filter: { getVal: (r: any) => r.module ?? "" } },
+    { key: "description",      label: "Description",       render: (r: any) => <span className="line-clamp-2 text-xs max-w-xs block">{r.description}</span> },
+    { key: "severity",         label: "Severity",          filter: { getVal: (r: any) => r.severity ?? "" },            render: (r: any) => <SeverityBadge value={r.severity} /> },
+    { key: "reportedBy",       label: "Reported By",       className: "whitespace-nowrap" },
+    { key: "openDate",         label: "Open Date",         filter: { getVal: (r: any) => formatDate(r.openDate) },      render: (r: any) => formatDate(r.openDate) },
+    { key: "status",           label: "Status",            filter: { getVal: (r: any) => r.status ?? "" },              render: (r: any) => <StatusBadge value={r.status} /> },
+    { key: "owner",            label: "Owner",             filter: { getVal: (r: any) => r.owner?.name ?? "" },         render: (r: any) => r.owner?.name ?? "—" },
+    { key: "daysOpen",         label: "Days Open",         render: (r: any) => <span className={r.daysOpen > 7 ? "text-red-600 font-medium" : ""}>{r.daysOpen}d</span> },
+    { key: "dueDate",          label: "Due",               filter: { getVal: (r: any) => formatDate(r.dueDate) },       render: (r: any) => formatDate(r.dueDate) },
+    { key: "actualCompletion", label: "Actual Completion", filter: { getVal: (r: any) => formatDate(r.actualCompletion) }, render: (r: any) => formatDate(r.actualCompletion) },
   ]
 
   return (
@@ -157,7 +171,7 @@ export default function IssuesPage() {
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>{editing ? "Edit Issue" : "Add Issue"}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -174,6 +188,15 @@ export default function IssuesPage() {
                 <SelectTrigger><SelectValue placeholder="Select reporter" /></SelectTrigger>
                 <SelectContent>
                   {users.map((u) => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Owner</Label>
+              <Select value={form.ownerId} onValueChange={(v) => setForm({ ...form, ownerId: v })}>
+                <SelectTrigger><SelectValue placeholder="Select owner" /></SelectTrigger>
+                <SelectContent>
+                  {users.map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -198,6 +221,10 @@ export default function IssuesPage() {
             <div className="space-y-1.5">
               <Label>Due Date</Label>
               <Input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Actual Completion</Label>
+              <Input type="date" value={form.actualCompletion} onChange={(e) => setForm({ ...form, actualCompletion: e.target.value })} />
             </div>
             <div className="col-span-2 space-y-1.5">
               <Label>Resolution</Label>

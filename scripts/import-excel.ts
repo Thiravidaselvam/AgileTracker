@@ -8,7 +8,7 @@ import bcrypt from "bcryptjs"
 const pool    = new Pool({ connectionString: process.env.DATABASE_URL })
 const adapter = new PrismaPg(pool)
 const db      = new PrismaClient({ adapter } as any)
-const FILE    = path.resolve(__dirname, "../../Agile_Project_Tracker.xlsx")
+const FILE    = path.resolve("D:/Downloads/Agile_Project_Tracker_Fixed.xlsx")
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -146,15 +146,16 @@ async function main() {
       update: {},
       create: {
         issueId,
-        description: row["Issue Description"] ?? "",
-        severity:    toSeverity(row["Severity"]),
-        reportedBy:  row["Reported By"]  ?? "",
-        status:      row["Status"]       ?? "Open",
-        openDate:    toDate(row["Open Date"]) ?? new Date(),
-        dueDate:     toDate(row["Due Date"]),
-        daysOpen:    Number(row["Days Open"] ?? 0),
-        resolution:  row["Resolution"]   ?? null,
-        ownerId:     resolve(row["Owner"]),
+        description:      row["Issue Description"]         ?? "",
+        severity:         toSeverity(row["Severity"]),
+        reportedBy:       row["Reported By"]               ?? "",
+        status:           row["Status"]                    ?? "Open",
+        openDate:         toDate(row["Open Date"])         ?? new Date(),
+        dueDate:          toDate(row["Due Date"]),
+        daysOpen:         Number(row["Days Open"]          ?? 0),
+        actualCompletion: toDate(row["Actual Completion Date"]),
+        resolution:       row["Resolution"]                ?? null,
+        ownerId:          resolve(row["Owner"]),
       },
     })
     issueCount++
@@ -172,16 +173,17 @@ async function main() {
       update: {},
       create: {
         testId,
-        module:      row["Module"]       ?? "",
-        subModule:   row["Sub Module"]   ?? null,
-        issueTitle:  row["Issue"]        ?? "",
-        description: row["Description"] ?? "",
-        testedBy:    normalizeName(row["Tested By"]) || "",
-        priority:    toPriority(row["Priority"]),
-        status:      row["Status"]       ?? "Open",
-        createdDate: toDate(row["Created Date"]) ?? new Date(),
-        targetDate:  toDate(row["Target Date"]),
-        ownerId:     resolve(row["Owner"]),
+        module:           row["Module"]                    ?? "",
+        subModule:        row["Sub Module"]                ?? null,
+        issueTitle:       row["Issue"]                     ?? "",
+        description:      row["Description"]               ?? "",
+        testedBy:         normalizeName(row["Tested By"])  || "",
+        priority:         toPriority(row["Priority"]),
+        status:           row["Status"]                    ?? "Open",
+        createdDate:      toDate(row["Created Date"])      ?? new Date(),
+        targetDate:       toDate(row["Target Date"]),
+        actualCompletion: toDate(row["Actual Completion"]),
+        ownerId:          resolve(row["Owner"]),
       },
     })
     testCount++

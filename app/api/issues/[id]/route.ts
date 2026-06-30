@@ -17,8 +17,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       reportedBy:  body.reportedBy,
       ownerId:     body.ownerId     ?? null,
       status:      body.status,
-      dueDate:     body.dueDate     ? new Date(body.dueDate) : null,
-      resolution:  body.resolution  ?? null,
+      dueDate:          body.dueDate          ? new Date(body.dueDate)          : null,
+      actualCompletion: body.actualCompletion ? new Date(body.actualCompletion) : null,
+      resolution:       body.resolution       ?? null,
     },
     include: { owner: { select: { id: true, name: true } } },
   })

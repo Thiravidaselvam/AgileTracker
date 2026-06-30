@@ -57,9 +57,10 @@ export async function POST(req: NextRequest) {
       ownerId:     body.ownerId     ?? null,
       status:      body.status      ?? "Open",
       openDate,
-      dueDate:     body.dueDate     ? new Date(body.dueDate) : null,
-      daysOpen:    differenceInDays(new Date(), openDate),
-      resolution:  body.resolution  ?? null,
+      dueDate:          body.dueDate          ? new Date(body.dueDate)          : null,
+      daysOpen:         differenceInDays(new Date(), openDate),
+      actualCompletion: body.actualCompletion ? new Date(body.actualCompletion) : null,
+      resolution:       body.resolution       ?? null,
     },
     include: { owner: { select: { id: true, name: true } } },
   })

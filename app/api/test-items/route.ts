@@ -45,9 +45,10 @@ export async function POST(req: NextRequest) {
       priority:     body.priority    ?? "MEDIUM",
       status:       body.status      ?? "Open",
       ownerId:      body.ownerId     ?? null,
-      createdDate:  body.createdDate  ? new Date(body.createdDate) : new Date(),
-      targetDate:   body.targetDate   ? new Date(body.targetDate)  : null,
-      linkedIssueId: body.linkedIssueId ?? null,
+      createdDate:      body.createdDate      ? new Date(body.createdDate)      : new Date(),
+      targetDate:       body.targetDate       ? new Date(body.targetDate)       : null,
+      actualCompletion: body.actualCompletion ? new Date(body.actualCompletion) : null,
+      linkedIssueId:    body.linkedIssueId    ?? null,
     },
     include: { owner: { select: { id: true, name: true } } },
   })
